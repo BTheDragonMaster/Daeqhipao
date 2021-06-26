@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 
-from illegal_moves import *
-from board import *
+import os
+import pygame
+
+from daeqhipao.illegal_moves import *
+from daeqhipao.style import *
+from daeqhipao.board import *
+import images.symbols
 import copy
 
-class Piece():
+
+
+SYMBOL_DIR = os.path.dirname(images.symbols.__file__)
+
+
+class Piece:
     def __init__(self, piece_id, player):
         self.id = piece_id
         self.location = None
+        self.name = None
+        self.gender = None
         
         self.active = True
         self.player = player
@@ -24,6 +36,12 @@ class Piece():
         self.oblivion = 0
         self.liberation = 0
 
+        self.symbol_image = None
+
+        self.piece_rectangle = None
+        self.symbol_rectangle = None
+
+
     def __eq__(self, piece):
         if self.id == piece.id:
             return True
@@ -33,13 +51,33 @@ class Piece():
     def __hash__(self):
         return self.id
 
+    def set_piece_rectangle(self):
+        x = (1 + self.location.x) * SQUARE_WIDTH + PIECE_PADDING
+        y = (1 + self.location.y) * SQUARE_WIDTH + PIECE_PADDING
+        self.piece_rectangle = pygame.Rect(x, y, PIECE_SIZE, PIECE_SIZE)
+
+    def set_symbol_rectangle(self):
+        x = (1 + self.location.x) * SQUARE_WIDTH + SYMBOL_PADDING
+        y = (1 + self.location.y) * SQUARE_WIDTH + SYMBOL_PADDING
+        self.symbol_rectangle = pygame.Rect(x, y, SYMBOL_SIZE, SYMBOL_SIZE)
+
+    def load_symbol_image(self):
+        symbol = os.path.join(SYMBOL_DIR, f'{self.name.lower()}.png')
+        self.symbol_image = pygame.image.load(symbol)
+
     def set_location(self, location, board):
-        board.check_field(location)
+        x, y = location
+
+        field = board.get_field(x, y)
+
+        if field:
         
-        self.location = location
-        board.get_field(location).piece = self
-        board.get_field(location).check_occupied()
-       
+            self.location = field
+            field.piece = self
+            field.check_occupied()
+
+        self.set_piece_rectangle()
+        self.set_symbol_rectangle()
 
     def choose_legacy_effect(self, choice, power):
         assert self.legacy
@@ -48,7 +86,7 @@ class Piece():
         duration = {'Time', 'Mind', 'Perception', 'Union', 'Communication',
                     'Oblivion', 'Liberation', 'Blindness', 'Ocean', 'Flame',
                     'Drought', 'Void'}
-        frequency - {'Illusion', 'Idea', 'Time', 'Life', 'Death', 'Wave',
+        frequency = {'Illusion', 'Idea', 'Time', 'Life', 'Death', 'Wave',
                      'Perception', 'Union', 'Impression', 'Communication',
                      'Metamorphosis', 'Oblivion', 'Liberation', 'Blindness',
                      'Earth', 'Ocean', 'Sun', 'Sky', 'Quake', 'Wind', 'Shadow',
@@ -71,7 +109,6 @@ class Piece():
 
         self.location = None
 
-        
     def sleep(self):
         if not self.legacy_frequency:
             self.active = False
@@ -90,6 +127,7 @@ class Piece():
 
     def activate_union(self, piece):
         self.union.append(piece)
+
     def deactivate_union(self):
         self.union = []
 
@@ -194,12 +232,19 @@ class Piece():
             raise IllegalMove('temple')
 
     def move(self, target_location, board):
-        board.get_field(self.location).piece = None
-        board.get_field(self.location).check_occupied()
+        x_diff = target_location.x - self.location.x
+        y_diff = target_location.y - self.location.y
+
+        self.location.piece = None
+        self.location.check_occupied()
         
         self.location = target_location
-        board.get_field(target_location).piece = self
-        board.get_field(target_location).check_occupied()
+        self.location.piece = self
+        self.location.check_occupied()
+
+        self.piece_rectangle = self.piece_rectangle.move(x_diff * SQUARE_WIDTH, y_diff * SQUARE_WIDTH)
+        self.symbol_rectangle = self.symbol_rectangle.move(x_diff * SQUARE_WIDTH, y_diff * SQUARE_WIDTH)
+        board.draw_piece(self)
 
     def select_piece(self, piece, power):
         if piece.check_immune(power):
@@ -212,7 +257,7 @@ class God(Piece):
         self.type = 'God'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent(board)
+        legal_fields = self.location.get_adjacent(board, 'all')
 
         return legal_fields
         
@@ -225,6 +270,7 @@ class Builder(God):
         self.name = "Builder"
         self.powers = ["Earth", "Ocean", "Sky", "Sun"]
         self.symbol = 'e'
+        self.load_symbol_image()
 
 class Alchemist(God):
     def __init__(self, nr, player):
@@ -233,6 +279,7 @@ class Alchemist(God):
         self.name = "Alchemist"
         self.powers = ["Metalmaker", "Bloodmaker", "Fog", "Flame"]
         self.symbol = 'g'
+        self.load_symbol_image()
 
 class Connector(God):
     def __init__(self, nr, player):
@@ -241,6 +288,7 @@ class Connector(God):
         self.name = "Connector"
         self.powers = ["Union", "Impression", "Communication", "Familiarity"]
         self.symbol = 'b'
+        self.load_symbol_image()
         
 class Wiper(God):
     def __init__(self, nr, player):
@@ -249,6 +297,7 @@ class Wiper(God):
         self.name = 'Wiper'
         self.powers = ["Death", "Blindness", "Oblivion", "Liberation"]
         self.symbol = 'd'
+        self.load_symbol_image()
 
 class Mover(God):
     def __init__(self, nr, player):
@@ -257,6 +306,7 @@ class Mover(God):
         self.name = 'Mover'
         self.powers = ["Quake", "Wave", "Wind", "Shadow"]
         self.symbol = 'f'
+        self.load_symbol_image()
 
 class Consumer(God):
     def __init__(self, nr, player):
@@ -265,6 +315,7 @@ class Consumer(God):
         self.name = 'Consumer'
         self.powers = ["Void", "Drought", "End", "Night"]
         self.symbol = 'h'
+        self.load_symbol_image()
 
 class Gifter(God):
     def __init__(self, nr, player):
@@ -273,6 +324,7 @@ class Gifter(God):
         self.name = 'Gifter'
         self.powers = ["Life", "Perception", "Mind", "Legacy"]
         self.symbol = 'a'
+        self.load_symbol_image()
 
 class Director(God):
     def __init__(self, nr, player):
@@ -281,6 +333,7 @@ class Director(God):
         self.name = 'Director'
         self.powers = ["Time", "Illusion", "Idea", "Metamorphosis"]
         self.symbol = 'c'
+        self.load_symbol_image()
 
 #==============================================================================
 
@@ -291,7 +344,7 @@ class FemaleHeir(Piece):
         self.type = 'Heir'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent_horizontal(board)
+        legal_fields = self.location.get_adjacent(board, 'horizontal')
 
         return legal_fields
 
@@ -302,7 +355,7 @@ class MaleHeir(Piece):
         self.type = 'Heir'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent_diagonal(board)
+        legal_fields = self.location.get_adjacent(board, 'diagonal')
 
         return legal_fields
 
@@ -313,6 +366,7 @@ class Union(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Union"
         self.symbol = 'm'
+        self.load_symbol_image()
 
     def use_power(self, piece_1, piece_2):
         self.select_piece(piece_1, self.name)
@@ -332,6 +386,7 @@ class Impression(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Impression"
         self.symbol = 'n'
+        self.load_symbol_image()
 
     def use_power(self, piece, board):
         self.select_piece(piece, self.name)
@@ -357,6 +412,7 @@ class Communication(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Communication"
         self.symbol = 'o'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -370,6 +426,7 @@ class Familiarity(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Familiarity"
         self.symbol = 'p'
+        self.load_symbol_image()
 
     def use_power(self, piece, pieces):
         raise NotImplementedError
@@ -379,6 +436,7 @@ class Death(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Death"
         self.symbol = 'u'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -394,6 +452,7 @@ class Blindness(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Blindness"
         self.symbol = 'v'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -406,6 +465,7 @@ class Oblivion(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Oblivion"
         self.symbol = 'w'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -421,6 +481,7 @@ class Liberation(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Liberation"
         self.symbol = 'x'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -434,6 +495,7 @@ class Earth(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Earth"
         self.symbol = 'y'
+        self.load_symbol_image()
 
     def use_power(self, barriers, board, field_1, field_2 = None):
         barriers.place_barrier(field_1, board)
@@ -447,6 +509,7 @@ class Ocean(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Ocean"
         self.symbol = 'z'
+        self.load_symbol_image()
 
     def use_power(self, field, board):
         board.check_field(field)
@@ -463,6 +526,7 @@ class Sky(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Sky"
         self.symbol = 'A'
+        self.load_symbol_image()
 
     def use_power(self, piece, board):
         self.select_piece(piece, self.name)
@@ -503,6 +567,7 @@ class Sun(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Sun"
         self.symbol = 'B'
+        self.load_symbol_image()
 
     def use_power(self, field, board):
         legal_locations = self.find_legal_locations(field, board)
@@ -575,6 +640,7 @@ class Metalmaker(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Metalmaker"
         self.symbol = 'G'
+        self.load_symbol_image()
 
     def use_power(self, field, barriers, board):
         
@@ -597,6 +663,7 @@ class Bloodmaker(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Bloodmaker"
         self.symbol = 'H'
+        self.load_symbol_image()
 
     def use_power(self, piece, barrier_field, barriers, board):
         self.select_piece(piece, self.name)
@@ -621,6 +688,7 @@ class Fog(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Fog"
         self.symbol = 'I'
+        self.load_symbol_image()
 
     def use_power(self, piece_1, piece_2, board):
         self.select_piece(piece_1, self.name)
@@ -645,6 +713,7 @@ class Flame(FemaleHeir):
         FemaleHeir.__init__(self, nr, player)
         self.name = "Flame"
         self.symbol = 'J'
+        self.load_symbol_image()
 
     def use_power(self, board):
         for field in find_flame_locations(board):
@@ -682,6 +751,7 @@ class Life(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Life"
         self.symbol = 'i'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -696,6 +766,7 @@ class Perception(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Perception"
         self.symbol = 'j'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -708,6 +779,7 @@ class Mind(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Mind"
         self.symbol = 'k'
+        self.load_symbol_image()
 
     def use_power(self, board):
         temple = board.get_field(self.player.temple)
@@ -720,6 +792,7 @@ class Legacy(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Legacy"
         self.symbol = 'l'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -734,6 +807,7 @@ class Time(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Time"
         self.symbol = 'q'
+        self.load_symbol_image()
 
     def use_power(self, player):
         
@@ -747,6 +821,7 @@ class Illusion(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Illusion"
         self.symbol = 'r'
+        self.load_symbol_image()
 
     def use_power(self, piece):
 
@@ -761,6 +836,7 @@ class Idea(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Idea"
         self.symbol = 's'
+        self.load_symbol_image()
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -773,6 +849,7 @@ class Metamorphosis(MaleHeir):
         MaleHeir.__init__(self, nr, player)
         self.name = "Metamorphosis"
         self.symbol = 't'
+        self.load_symbol_image()
 
     def use_power(self, piece_1, piece_2, board, players):
         if piece_1.player == self.player:
@@ -799,52 +876,67 @@ class Metamorphosis(MaleHeir):
         piece_1.location = board.get_field(piece2_location)
         piece_2.location = board.get_field(piece1_location)
 
-        
 
 class Quake(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, location, player)
         self.name = "Quake"
         self.symbol = 'C'
+        self.load_symbol_image()
+
 
 class Wave(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Wave"
         self.symbol = 'D'
+        self.load_symbol_image()
+
 
 class Wind(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Wind"
         self.symbol = 'E'
+        self.load_symbol_image()
+
 
 class Shadow(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Shadow"
         self.symbol = 'F'
+        self.load_symbol_image()
+
 
 class Void(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Void"
         self.symbol = 'K'
+        self.load_symbol_image()
+
 
 class Drought(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Drought"
         self.symbol = 'L'
+        self.load_symbol_image()
+
 
 class End(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "End"
         self.symbol = 'M'
+        self.load_symbol_image()
+
+
 
 class Night(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
         self.name = "Night"
         self.symbol = 'N'
+        self.load_symbol_image()

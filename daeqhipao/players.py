@@ -2,28 +2,8 @@
 
 from daeqhipao.pieces import *
 from daeqhipao.illegal_moves import *
+from daeqhipao.player_properties import PLAYER_PROPERTIES
 
-class PlayerProperties:
-    player_to_colour = {1: (165, 30, 30),
-                        2: (236, 126, 0),
-                        3: (67, 84, 198),
-                        4: (152, 46, 191)}
-    player_to_starting_squares = {1: [(3, 9), (4, 9), (5, 9), (6, 9), (7, 9)],
-                                  2: [(1, 3), (1, 4), (1, 5), (1, 6), (1, 7)],
-                                  3: [(3, 1), (4, 1), (5, 1), (6, 1), (7, 1)],
-                                  4: [(9, 3), (9, 4), (9, 5), (9, 6), (9, 7)]}
-
-    player_to_temple_area = {1: [(3, 8), (4, 8), (5, 8), (6, 8), (7, 8)],
-                             2: [(2, 3), (2, 4), (2, 5), (2, 6), (2, 7)],
-                             3: [(3, 2), (4, 2), (5, 2), (6, 2), (7, 2)],
-                             4: [(8, 3), (8, 4), (8, 5), (8, 6), (8, 7)]}
-
-    player_to_temple_square = {1: (5, 10),
-                               2: (0, 5),
-                               3: (5, 0),
-                               4: (10, 5)}
-
-PLAYER_PROPERTIES = PlayerProperties()
 
 class Players:
     def __init__(self, players):
@@ -37,54 +17,12 @@ class Players:
 
 class Player:
 
-
-    piece_dict = {"Gifter": Gifter,
-                  "Connector": Connector,
-                  "Director": Director,
-                  "Wiper": Wiper,
-                  "Builder": Builder,
-                  "Mover": Mover,
-                  "Alchemist": Alchemist,
-                  "Consumer": Consumer,
-                  "Life": Life,
-                  "Perception": Perception,
-                  "Mind": Mind,
-                  "Legacy": Legacy,
-                  "Union": Union,
-                  "Impression": Impression,
-                  "Communication": Communication,
-                  "Familiarity": Familiarity,
-                  "Time": Time,
-                  "Illusion": Illusion,
-                  "Idea": Idea,
-                  "Metamorphosis": Metamorphosis,
-                  "Death": Death,
-                  "Blindness": Blindness,
-                  "Oblivion": Oblivion,
-                  "Liberation": Liberation,
-                  "Earth": Earth,
-                  "Ocean": Ocean,
-                  "Sky": Sky,
-                  "Sun": Sun,
-                  "Quake": Quake,
-                  "Wave": Wave,
-                  "Wind": Wind,
-                  "Shadow": Shadow,
-                  "Metalmaker": Metalmaker,
-                  "Bloodmaker": Bloodmaker,
-                  "Fog": Fog,
-                  "Flame": Flame,
-                  "Void": Void,
-                  "Drought": Drought,
-                  "End": End,
-                  "Night": Night}
-
-
-    def __init__(self, player_id, board):
+    def __init__(self, player_id):
         if not type(player_id) == int or player_id < 1 or player_id > 4:
             raise PlayerError('illegal number')
         self.id = player_id
         self.colour = PLAYER_PROPERTIES.player_to_colour[self.id]
+        self.colour_rgb = PLAYER_PROPERTIES.player_to_colour_rgb[self.id]
         self.heirs = []
         self.god = None
         self.name = None

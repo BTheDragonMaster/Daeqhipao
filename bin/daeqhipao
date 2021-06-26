@@ -10,8 +10,12 @@ import images
 from pygame.locals import *
 
 from daeqhipao.board import Board
+from daeqhipao.pieces import *
+from daeqhipao.players import *
+from daeqhipao.side_panel import SidePanel
 
 DAEQHIPAO_FOLDER = os.path.dirname(os.path.realpath(sys.argv[0]))
+
 
 
 size = 1200, 800
@@ -20,24 +24,65 @@ GREEN = (150, 255, 150)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
-
-
 pygame.init()
 screen = pygame.display.set_mode(size)
 screen.fill(WHITE)
-board = Board(screen, height)
+board = Board(screen)
+side_panel = SidePanel(screen)
 board.draw_frame()
+side_panel.draw_panel()
+
+
+player_1 = Player(1)
+player_3 = Player(3)
+
+piece = Sun(1, player_1)
+piece.set_location((5, 6), board)
+
+piece_2 = Idea(2, player_3)
+piece_2.set_location((6, 6), board)
+
+piece_3 = Builder(3, player_3)
+piece_3.set_location((3, 5), board)
 
 running = True
+piece_selected = False
+selected_piece = None
 
 while running:
     for event in pygame.event.get():
         if event.type == QUIT:
             running = False
 
-    mouse = pygame.mouse.get_pos()
-    board.highlight_field(mouse)
-    board.draw_frame()
+        elif event.type == MOUSEBUTTONDOWN:
+            mouse = pygame.mouse.get_pos()
+            field = board.get_mouse_field(mouse)
+            if field:
+                if field.piece and not piece_selected:
+                    piece_selected = True
+                    selected_piece = field.piece
+                    board.highlight_move_options(field.piece)
+                elif piece_selected and not field.piece:
+                    if field in selected_piece.get_movement_options(board):
+                        selected_piece.move(field, board)
+
+                    piece_selected = False
+                    selected_piece = None
+
+                else:
+                    piece_selected = False
+                    selected_piece = None
+
+            else:
+                piece_selected = False
+                selected_piece = None
+
+
+
+    if not piece_selected:
+        mouse = pygame.mouse.get_pos()
+        board.highlight_field(mouse)
+
    # pygame.draw.rect(screen, RED, rect, 1)
    # screen.blit(ball, rect)
     pygame.display.update()

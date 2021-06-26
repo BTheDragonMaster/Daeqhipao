@@ -6,66 +6,22 @@ Gaming board
 import os
 
 from daeqhipao.illegal_moves import *
+from daeqhipao.board_properties import BOARD_PROPERTIES
+from daeqhipao.style import *
 import pygame
-import images
+import images.pieces
 
+PIECE_IMAGE_DIR = os.path.dirname(images.pieces.__file__)
 IMAGE_DIR = os.path.dirname(images.__file__)
 LOGO = os.path.join(IMAGE_DIR, 'logo.png')
 
 
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-HIGHLIGHT = (170, 170, 170)
-
 class Board:
-    starting_squares = [(3, 9),
-                        (4, 9),
-                        (5, 9),
-                        (6, 9),
-                        (7, 9),
-                        (1, 3),
-                        (1, 4),
-                        (1, 5),
-                        (1, 6),
-                        (1, 7),
-                        (3, 1),
-                        (4, 1),
-                        (5, 1),
-                        (6, 1),
-                        (7, 1),
-                        (9, 3),
-                        (9, 4),
-                        (9, 5),
-                        (9, 6),
-                        (9, 7)]
 
-    temple_squares = [(0, 5), (0, 10), (5, 0), (5, 10)]
 
-    temple_area_squares = [(3, 8),
-                           (4, 8),
-                           (5, 8),
-                           (6, 8),
-                           (7, 8),
-                           (2, 3),
-                           (2, 4),
-                           (2, 5),
-                           (2, 6),
-                           (2, 7),
-                           (3, 2),
-                           (4, 2),
-                           (5, 2),
-                           (6, 2),
-                           (7, 2),
-                           (8, 3),
-                           (8, 4),
-                           (8, 5),
-                           (8, 6),
-                           (8, 7)]
-
-    def __init__(self, screen, height):
+    def __init__(self, screen):
 
         self.screen = screen
-        self.square_width = int(height / 13)
         self.logo = pygame.image.load(LOGO)
 
         self.board = []
@@ -108,36 +64,42 @@ class Board:
         self.draw_board_line((10, 3), (10, 8))
         self.draw_board_line((11, 5), (11, 6))
 
-        logo_position = (6 * self.square_width, 6 * self.square_width)
-        logo = pygame.transform.smoothscale(self.logo, (self.square_width, self.square_width))
+        logo_position = (6 * SQUARE_WIDTH, 6 * SQUARE_WIDTH)
+        logo = pygame.transform.smoothscale(self.logo, (SQUARE_WIDTH, SQUARE_WIDTH))
         self.screen.blit(logo, logo_position)
 
     def draw_board_line(self, start, end):
         start_x, start_y = start
         end_x, end_y = end
 
-        start_x = self.square_width * (1 + start_x)
-        start_y = self.square_width * (1 + start_y)
+        start_x = SQUARE_WIDTH * (1 + start_x)
+        start_y = SQUARE_WIDTH * (1 + start_y)
 
-        end_x = self.square_width * (1 + end_x)
-        end_y = self.square_width * (1 + end_y)
+        end_x = SQUARE_WIDTH * (1 + end_x)
+        end_y = SQUARE_WIDTH * (1 + end_y)
 
         pygame.draw.line(self.screen, BLACK, (start_x, start_y), (end_x, end_y))
 
-    def check_field(self, mouse):
-        x = int(mouse[0] / self.square_width) - 1
-        y = int(mouse[1] / self.square_width) - 1
+    def get_mouse_field(self, mouse):
+        x = int(mouse[0] / SQUARE_WIDTH) - 1
+        y = int(mouse[1] / SQUARE_WIDTH) - 1
 
         field = self.get_field(x, y)
 
-        if not field.type == 'no field':
+        if field and not field.type == 'no field':
             return field
 
         else:
             return None
 
+    def highlight_move_options(self, piece):
+        legal_fields = piece.get_movement_options(self)
+        for legal_field in legal_fields:
+            legal_field.highlight(self.screen, piece.player, self)
 
-    def highlight_field(self, mouse, highlight_colour=(170,170,170)):
+        self.draw_frame()
+
+    def highlight_field(self, mouse):
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
                 field = self.get_field(i, j)
@@ -147,17 +109,19 @@ class Board:
                     else:
                         hovered = False
                     field.draw(self.screen, hovered)
+                    self.draw_frame()
+                    if field.piece:
+                        self.draw_piece(field.piece)
 
-
-    def calc_offset(self, field):
-        x_offset = 100 + field.x * 100 + 3
-        y_offset = 100 + field.y * 100 + 3
+    def calc_piece_offset(self, field):
+        x_offset = (1 + field.x) * SQUARE_WIDTH + PIECE_PADDING
+        y_offset = (1 + field.y) * SQUARE_WIDTH + PIECE_PADDING
 
         return x_offset, y_offset
 
-    def calc_symbol_offset(self, x_offset, y_offset):
-        x_offset = x_offset + 25
-        y_offset = y_offset + 25
+    def calc_symbol_offset(self, field):
+        x_offset = (1 + field.x) * SQUARE_WIDTH + SYMBOL_PADDING
+        y_offset = (1 + field.y) * SQUARE_WIDTH + SYMBOL_PADDING
 
         return x_offset, y_offset
 
@@ -171,24 +135,25 @@ class Board:
             gender = 'male'
 
         if not piece.active:
-            piece_body_dir = f'pieces/{piece.player.colour}_passive.png'
+            piece_body_dir = os.path.join(PIECE_IMAGE_DIR, f'{piece.player.colour}_passive.png')
         else:
-            piece_body_dir = f'pieces/{piece.player.colour}_{gender}_{piece_type}.png'
+            piece_body_dir = os.path.join(PIECE_IMAGE_DIR, f'{piece.player.colour}_{gender}_{piece_type}.png')
 
-        piece_image = Image.open(piece_body_dir)
-        x_offset, y_offset = self.calc_offset(piece.location)
-        self.image.paste(piece_image, box=(x_offset, y_offset))
+        piece_image = pygame.image.load(piece_body_dir)
+        piece_image_scaled = pygame.transform.smoothscale(piece_image, (PIECE_SIZE, PIECE_SIZE))
 
-        piece_symbol_dir = 'symbols/%s.png' % piece.name
-        symbol_image = Image.open(piece_symbol_dir)
-        x_offset, y_offset = self.calc_symbol_offset(x_offset, y_offset)
-        self.image.paste(symbol_image, box=(x_offset, y_offset), mask=symbol_image)
+        self.screen.blit(piece_image_scaled, piece.piece_rectangle)
 
-    def draw_pieces(self, board):
-        for row in board.board:
-            for column in row:
-                if column.piece:
-                    self.draw_piece(column.piece)
+        symbol_image = piece.symbol_image
+        symbol_image_scaled = pygame.transform.smoothscale(symbol_image, (SYMBOL_SIZE, SYMBOL_SIZE))
+
+        self.screen.blit(symbol_image_scaled, piece.symbol_rectangle)
+
+    def draw_pieces(self):
+        for row in self.board:
+            for field in row:
+                if field.piece:
+                    self.draw_piece(field.piece)
 
     def draw_board(self, board):
         self.draw_frame()
@@ -213,19 +178,19 @@ class Board:
                     self.board[i][j].type = "no field"
 
 
-        for x, y in self.starting_squares:
+        for x, y in BOARD_PROPERTIES.starting_squares:
             self.board[x][y].type = "starting square"
 
-        for x, y in self.temple_area_squares:
+        for x, y in BOARD_PROPERTIES.temple_area_squares:
             self.board[x][y].type = "temple area"
 
-        for x, y in self.temple_squares:
+        for x, y in BOARD_PROPERTIES.temple_squares:
             self.board[x][y].type = "temple square"
 
     def set_rectangles(self):
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
-                self.board[i][j].set_rectangle(self.square_width)
+                self.board[i][j].set_rectangle(SQUARE_WIDTH)
 
 
     def print_board_type(self):
@@ -237,7 +202,10 @@ class Board:
         print(string)
 
     def get_field(self, x, y):
-        return self.board[x][y]
+        try:
+            return self.board[x][y]
+        except IndexError:
+            return None
 
 
 class Barriers:
@@ -338,9 +306,14 @@ class Field:
 
     def draw(self, screen, hovered):
         if hovered:
-            pygame.draw.rect(screen, HIGHLIGHT, self.rectangle)
+            pygame.draw.rect(screen, HIGHLIGHT_BOARD, self.rectangle)
         else:
-            pygame.draw.rect(screen, WHITE, self.rectangle)
+            pygame.draw.rect(screen, BACKGROUND_BOARD, self.rectangle)
+
+    def highlight(self, screen, player, board):
+        pygame.draw.rect(screen, player.colour_rgb, self.rectangle)
+        if self.piece:
+            board.draw_piece(self.piece)
 
 
     def set_owner(self, player):
@@ -379,73 +352,47 @@ class Field:
         else:
             return True
 
-    def get_adjacent_horizontal(self, board):
+    def get_adjacent(self, board, type='all'):
 
         adjacent = []
+        if type == 'horizontal':
 
-        coord_combinations = [(self.location.x - 1, self.location.y),
-                              (self.location.x + 1, self.location.y),
-                              (self.location.x, self.location.y - 1),
-                              (self.location.x, self.location.y + 1)]
+            coord_combinations = [(self.x - 1, self.y),
+                                  (self.x + 1, self.y),
+                                  (self.x, self.y - 1),
+                                  (self.x, self.y + 1)]
 
+        elif type == 'diagonal':
+            coord_combinations = [(self.x - 1, self.y - 1),
+                                  (self.x + 1, self.y - 1),
+                                  (self.x - 1, self.y + 1),
+                                  (self.x + 1, self.y + 1)]
+
+        elif type == 'all':
+            coord_combinations = [(self.x - 1, self.y),
+                                  (self.x + 1, self.y),
+                                  (self.x, self.y - 1),
+                                  (self.x, self.y + 1),
+                                  (self.x - 1, self.y - 1),
+                                  (self.x + 1, self.y - 1),
+                                  (self.x - 1, self.y + 1),
+                                  (self.x + 1, self.y + 1)]
 
         for coord_combination in coord_combinations:
             x = coord_combination[0]
             y = coord_combination[1]
-            
-            try:
-                candidate = PhantomField(x, y)
-                board.check_field(candidate)
-                adjacent.append(board.get_field(candidate))
 
-            except IllegalField:
+            try:
+
+                field = board.board[x][y]
+
+                if field.type != 'no field' and not field.piece:
+                    adjacent.append(field)
+            except IndexError:
                 pass
 
         return adjacent
 
-    def get_adjacent_diagonal(self, board):
-
-        adjacent = []
-
-        coord_combinations = [(self.location.x - 1, self.location.y - 1),
-                              (self.location.x + 1, self.location.y - 1),
-                              (self.location.x - 1, self.location.y + 1),
-                              (self.location.x + 1, self.location.y + 1)]
-
-
-        for coord_combination in coord_combinations:
-            x = coord_combination[0]
-            y = coord_combination[1]
-            
-            try:
-                candidate = PhantomField(x, y)
-                board.check_field(candidate)
-                adjacent.append(board.get_field(candidate))
-
-            except IllegalField:
-                pass
-
-        return adjacent
-
-    def get_adjacent(self, board):
-
-        adjacent = []
-
-        x_coords = [self.x - 1, self.x, self.x + 1]
-        y_coords = [self.y - 1, self.y, self.y + 1]
-
-        for x in x_coords:
-            for y in y_coords:
-                if not (x == self.x) and not (y == self.y):
-                    try:
-                        candidate = PhantomField(x, y)
-                        check_field(candidate)
-                        adjacent.append(board.get_field(candidate))
-
-                    except IllegalField:
-                        pass
-
-        return adjacent
 
 class PhantomField(Field):
     def __init__(self, x, y):
