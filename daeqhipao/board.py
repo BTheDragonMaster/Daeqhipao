@@ -3,11 +3,244 @@
 """
 Gaming board
 """
+import os
 
-from PIL import ImageDraw, ImageFont, Image
-from illegal_moves import *
+from daeqhipao.illegal_moves import *
+import pygame
+import images
 
-class Barriers():
+IMAGE_DIR = os.path.dirname(images.__file__)
+LOGO = os.path.join(IMAGE_DIR, 'logo.png')
+
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+HIGHLIGHT = (170, 170, 170)
+
+class Board:
+    starting_squares = [(3, 9),
+                        (4, 9),
+                        (5, 9),
+                        (6, 9),
+                        (7, 9),
+                        (1, 3),
+                        (1, 4),
+                        (1, 5),
+                        (1, 6),
+                        (1, 7),
+                        (3, 1),
+                        (4, 1),
+                        (5, 1),
+                        (6, 1),
+                        (7, 1),
+                        (9, 3),
+                        (9, 4),
+                        (9, 5),
+                        (9, 6),
+                        (9, 7)]
+
+    temple_squares = [(0, 5), (0, 10), (5, 0), (5, 10)]
+
+    temple_area_squares = [(3, 8),
+                           (4, 8),
+                           (5, 8),
+                           (6, 8),
+                           (7, 8),
+                           (2, 3),
+                           (2, 4),
+                           (2, 5),
+                           (2, 6),
+                           (2, 7),
+                           (3, 2),
+                           (4, 2),
+                           (5, 2),
+                           (6, 2),
+                           (7, 2),
+                           (8, 3),
+                           (8, 4),
+                           (8, 5),
+                           (8, 6),
+                           (8, 7)]
+
+    def __init__(self, screen, height):
+
+        self.screen = screen
+        self.square_width = int(height / 13)
+        self.logo = pygame.image.load(LOGO)
+
+        self.board = []
+        for i in range(11):
+            row = []
+            for j in range(11):
+                row.append(Field(i, j))
+            self.board.append(row)
+
+        self.assign_field_types()
+        self.set_rectangles()
+
+
+
+    def draw_frame(self):
+        self.draw_board_line((5, 0), (6, 0))
+        self.draw_board_line((3, 1), (8, 1))
+        self.draw_board_line((3, 2), (8, 2))
+        self.draw_board_line((1, 3), (10, 3))
+        self.draw_board_line((3, 1), (8, 1))
+        self.draw_board_line((1, 4), (10, 4))
+        self.draw_board_line((0, 5), (11, 5))
+        self.draw_board_line((0, 6), (11, 6))
+        self.draw_board_line((1, 7), (10, 7))
+        self.draw_board_line((1, 8), (10, 8))
+        self.draw_board_line((3, 9), (8, 9))
+        self.draw_board_line((3, 10), (8, 10))
+        self.draw_board_line((5, 11), (6, 11))
+
+        self.draw_board_line((0, 5), (0, 6))
+        self.draw_board_line((1, 3), (1, 8))
+        self.draw_board_line((2, 3), (2, 8))
+        self.draw_board_line((3, 1), (3, 10))
+        self.draw_board_line((4, 1), (4, 10))
+        self.draw_board_line((5, 0), (5, 11))
+        self.draw_board_line((6, 0), (6, 11))
+        self.draw_board_line((7, 1), (7, 10))
+        self.draw_board_line((8, 1), (8, 10))
+        self.draw_board_line((9, 3), (9, 8))
+        self.draw_board_line((10, 3), (10, 8))
+        self.draw_board_line((11, 5), (11, 6))
+
+        logo_position = (6 * self.square_width, 6 * self.square_width)
+        logo = pygame.transform.smoothscale(self.logo, (self.square_width, self.square_width))
+        self.screen.blit(logo, logo_position)
+
+    def draw_board_line(self, start, end):
+        start_x, start_y = start
+        end_x, end_y = end
+
+        start_x = self.square_width * (1 + start_x)
+        start_y = self.square_width * (1 + start_y)
+
+        end_x = self.square_width * (1 + end_x)
+        end_y = self.square_width * (1 + end_y)
+
+        pygame.draw.line(self.screen, BLACK, (start_x, start_y), (end_x, end_y))
+
+    def check_field(self, mouse):
+        x = int(mouse[0] / self.square_width) - 1
+        y = int(mouse[1] / self.square_width) - 1
+
+        field = self.get_field(x, y)
+
+        if not field.type == 'no field':
+            return field
+
+        else:
+            return None
+
+
+    def highlight_field(self, mouse, highlight_colour=(170,170,170)):
+        for i, row in enumerate(self.board):
+            for j, column in enumerate(row):
+                field = self.get_field(i, j)
+                if not field.type == 'no field':
+                    if field.rectangle.collidepoint(mouse):
+                        hovered = True
+                    else:
+                        hovered = False
+                    field.draw(self.screen, hovered)
+
+
+    def calc_offset(self, field):
+        x_offset = 100 + field.x * 100 + 3
+        y_offset = 100 + field.y * 100 + 3
+
+        return x_offset, y_offset
+
+    def calc_symbol_offset(self, x_offset, y_offset):
+        x_offset = x_offset + 25
+        y_offset = y_offset + 25
+
+        return x_offset, y_offset
+
+    def draw_piece(self, piece):
+
+        piece_type = piece.type.lower()
+
+        if piece.gender == 'F':
+            gender = 'female'
+        else:
+            gender = 'male'
+
+        if not piece.active:
+            piece_body_dir = f'pieces/{piece.player.colour}_passive.png'
+        else:
+            piece_body_dir = f'pieces/{piece.player.colour}_{gender}_{piece_type}.png'
+
+        piece_image = Image.open(piece_body_dir)
+        x_offset, y_offset = self.calc_offset(piece.location)
+        self.image.paste(piece_image, box=(x_offset, y_offset))
+
+        piece_symbol_dir = 'symbols/%s.png' % piece.name
+        symbol_image = Image.open(piece_symbol_dir)
+        x_offset, y_offset = self.calc_symbol_offset(x_offset, y_offset)
+        self.image.paste(symbol_image, box=(x_offset, y_offset), mask=symbol_image)
+
+    def draw_pieces(self, board):
+        for row in board.board:
+            for column in row:
+                if column.piece:
+                    self.draw_piece(column.piece)
+
+    def draw_board(self, board):
+        self.draw_frame()
+        self.draw_pieces(board)
+
+    def assign_field_types(self):
+        for i, row in enumerate(self.board):
+            for j, column in enumerate(row):
+                if i == 0 or i == 10:
+                    if j != 5:
+                        self.board[i][j].type = "no field"
+
+                elif j == 0 or j == 10:
+                    if i != 5:
+                        self.board[i][j].type = "no field"
+
+
+                elif i == 1 or i == 2 or i == 8 or i == 9:
+                    if j == 1 or j == 2 or j == 8 or j == 9:
+                        self.board[i][j].type = "no field"
+                elif i == 5 and j == 5:
+                    self.board[i][j].type = "no field"
+
+
+        for x, y in self.starting_squares:
+            self.board[x][y].type = "starting square"
+
+        for x, y in self.temple_area_squares:
+            self.board[x][y].type = "temple area"
+
+        for x, y in self.temple_squares:
+            self.board[x][y].type = "temple square"
+
+    def set_rectangles(self):
+        for i, row in enumerate(self.board):
+            for j, column in enumerate(row):
+                self.board[i][j].set_rectangle(self.square_width)
+
+
+    def print_board_type(self):
+        string = ''
+        for row in self.board:
+            for column in row:
+                string += "%s\t" % column.type
+            string += '\n'
+        print(string)
+
+    def get_field(self, x, y):
+        return self.board[x][y]
+
+
+class Barriers:
     def __init__(self):
         self.count = 0
         
@@ -54,13 +287,28 @@ class Barriers():
 
         self.count -= 1
         
-        
 
-        
-class Field():
+class Field:
+    """
+    Field types:
+        field
+        no field
+        temple square
+        temple area
+        starting square
+        barrier square
+
+    Owners:
+        Player (1, 2, 3, 4)
+        None
+
+    """
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.owner = None
+        self.type = 'field'
+
         self.piece = None
         self.barrier = False
         self.occupied = False
@@ -71,6 +319,7 @@ class Field():
         self.flame_casters = set([])
         
         self.type = 'Regular'
+        self.rectangle = None
 
     def __repr__(self):
         return "%d-%d" % (self.x, self.y)
@@ -81,6 +330,28 @@ class Field():
     def __hash__(self):
         return hash((self.x, self.y))
 
+    def set_rectangle(self, square_width):
+        x = (self.x + 1) * square_width
+        y = (self.y + 1) * square_width
+        self.rectangle = pygame.Rect(x, y, square_width, square_width)
+
+
+    def draw(self, screen, hovered):
+        if hovered:
+            pygame.draw.rect(screen, HIGHLIGHT, self.rectangle)
+        else:
+            pygame.draw.rect(screen, WHITE, self.rectangle)
+
+
+    def set_owner(self, player):
+        self.owner = player
+
+    def in_temple_area(self):
+        if self.type == 'temple area' or self.type == 'starting square':
+            return True
+        else:
+            return False
+
     def activate_flame(self, piece):
         self.flame = True
         self.flame_casters.append(piece.player())
@@ -88,7 +359,6 @@ class Field():
     def deactivate_flame(self):
         self.flame = False
         self.flame_casters.remove(piece.player())
-        
 
     def check_occupied(self):
         if self.piece or self.barrier:
@@ -211,128 +481,6 @@ class NoField(Field):
     def __init__(self, x, y):
         Field.__init__(self, x, y)
         self.type = "No field"
-    
-
-class Board():
-
-    def __init__(self):
-        self.board = []
-        for i in range(11):
-            row = []
-            for j in range(11):
-                row.append(Field(i, j))
-            self.board.append(row)
-
-        self.filter_board()
-        self.define_squares()
-        self.make_starter_dict()
-
-    def make_starter_dict(self):
-        self.starter_dict = {1: {1: self.get_field(PhantomField(3, 9)),
-                                 2: self.get_field(PhantomField(4, 9)),
-                                 3: self.get_field(PhantomField(5, 9)),
-                                 4: self.get_field(PhantomField(6, 9)),
-                                 5: self.get_field(PhantomField(7, 9))},
-                             2: {1: self.get_field(PhantomField(1, 3)),
-                                 2: self.get_field(PhantomField(1, 4)),
-                                 3: self.get_field(PhantomField(1, 5)),
-                                 4: self.get_field(PhantomField(1, 6)),
-                                 5: self.get_field(PhantomField(1, 7))},
-                             3: {1: self.get_field(PhantomField(3, 1)),
-                                 2: self.get_field(PhantomField(4, 1)),
-                                 3: self.get_field(PhantomField(5, 1)),
-                                 4: self.get_field(PhantomField(6, 1)),
-                                 5: self.get_field(PhantomField(7, 1))},
-                             4: {1: self.get_field(PhantomField(9, 3)),
-                                 2: self.get_field(PhantomField(9, 4)),
-                                 3: self.get_field(PhantomField(9, 5)),
-                                 4: self.get_field(PhantomField(9, 6)),
-                                 5: self.get_field(PhantomField(9, 7))}}
-
-    def get_starting_positions(self, player):
-        return self.starter_dict[player.id]
-
-    def filter_board(self):
-        for i, row in enumerate(self.board):
-            for j, column in enumerate(row):
-                if i == 0 or i == 10:
-                    if j != 5:
-                        self.board[i][j] = NoField(i, j)
-
-                elif j == 0 or j == 10:
-                    if i != 5:
-                        self.board[i][j] = NoField(i, j)
-                        
-
-                elif i == 1 or i == 2 or i == 8 or i == 9:
-                    if j == 1 or j == 2 or j == 8 or j == 9:
-                        self.board[i][j] = NoField(i, j)
-                elif i == 5 and j == 5:
-                    self.board[i][j] = NoField(i, j)
-
-    def print_board_type(self):
-        string = ''
-        for row in self.board:
-            for column in row:
-                string += "%s\t" % column.type
-            string += '\n'
-        print(string)
-        
-    def get_field(self, field):
-        return self.board[field.x][field.y]
-
-    def check_field(self, field):
-
-        if field.x < 0 or field.y < 0 or field.x > 10 or field.y > 10:
-            raise IllegalField('no field')
-
-        if self.get_field(field).type == "No field":
-            raise IllegalField('no field')
-
-    def get_temple_square(self, player):
-        for row in self.board:
-            for field in row:
-                if field.type == "Temple":
-                    if field.player == player.id:
-                        return field
-
-    def define_squares(self):
-        for i, row in enumerate(self.board):
-            for j, column in enumerate(row):
-                if column.type != "No field":
-                    if column.x == 0:
-                        self.board[i][j] = TempleSquare(column.x, column.y, 2)
-                    if column.y == 0:
-                        self.board[i][j] = TempleSquare(column.x, column.y, 3)
-                    if column.x == 10:
-                        self.board[i][j] = TempleSquare(column.x, column.y, 4)
-                    if column.y == 10:
-                        self.board[i][j] = TempleSquare(column.x, column.y, 1)
-
-                    if column.x == 1:
-                        self.board[i][j] = TempleArea(column.x, column.y, 2,
-                                                      True)
-                    if column.x == 2:
-                        self.board[i][j] = TempleArea(column.x, column.y, 2,
-                                                      False)
-                    if column.y == 1:
-                        self.board[i][j] = TempleArea(column.x, column.y, 3,
-                                                      True)
-                    if column.y == 2:
-                        self.board[i][j] = TempleArea(column.x, column.y, 3,
-                                                      False)
-                    if column.x == 8:
-                        self.board[i][j] = TempleArea(column.x, column.y, 4,
-                                                      False)
-                    if column.x == 9:
-                        self.board[i][j] = TempleArea(column.x, column.y, 4,
-                                                      True)
-                    if column.y == 8:
-                        self.board[i][j] = TempleArea(column.x, column.y, 1,
-                                                      False)
-                    if column.y == 9:
-                        self.board[i][j] = TempleArea(column.x, column.y, 1,
-                                                      True)
 
 
 

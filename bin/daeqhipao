@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import importlib.resources as pkg_resources
+from pathlib import Path
+
+import pygame
+import images
+from pygame.locals import *
+
+from daeqhipao.board import Board
+
+DAEQHIPAO_FOLDER = os.path.dirname(os.path.realpath(sys.argv[0]))
+
+
+size = 1200, 800
+width, height = size
+GREEN = (150, 255, 150)
+RED = (255, 0, 0)
+WHITE = (255, 255, 255)
+
+
+
+pygame.init()
+screen = pygame.display.set_mode(size)
+screen.fill(WHITE)
+board = Board(screen, height)
+board.draw_frame()
+
+running = True
+
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+
+    mouse = pygame.mouse.get_pos()
+    board.highlight_field(mouse)
+    board.draw_frame()
+   # pygame.draw.rect(screen, RED, rect, 1)
+   # screen.blit(ball, rect)
+    pygame.display.update()
+
+pygame.quit()
