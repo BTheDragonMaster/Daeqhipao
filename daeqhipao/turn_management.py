@@ -20,7 +20,6 @@ class TurnManager:
 
     def __init__(self, players, board, screen, pieces, barriers):
         self.turn = 0
-        print(self.turn)
         self.players = players
 
         self.board = board
@@ -61,10 +60,9 @@ class TurnManager:
         return state
 
     def select_target(self, target):
+        hide_piece_buttons(self.screen, self.active_buttons)
+        show_reset_selection_button(self.screen, self.active_buttons)
         target_type = self.power.get_target_type()
-
-        print(target_type)
-        print(self.power.target_nr)
 
         self.board.highlight_field_strong(self.current_piece.player, target)
 
@@ -79,7 +77,6 @@ class TurnManager:
             if self.power.selected_piece_1:
                 self.power.select_piece_2(target.piece, self.board)
             else:
-                print("Hey handsome")
                 self.power.select_piece_1(target.piece, self.board)
 
         elif target_type == 'barrier':
@@ -100,6 +97,8 @@ class TurnManager:
             if self.barriers.used_barriers:
                 show_remove_barrier_button(self.screen, self.active_buttons)
 
+            self.current_piece = None
+
             return True
 
         else:
@@ -108,10 +107,12 @@ class TurnManager:
     def place_zaopeng_barrier(self, field):
         barrier_to_place = self.barriers.unused_barriers[0]
         barrier_to_place.place_on_board(field, self.board, self.barriers)
+        PLACE_BARRIER_BUTTON.selected = False
 
     def remove_zaopeng_barrier(self, field):
         barrier_to_remove = field.barrier
         barrier_to_remove.remove_from_board(self.board, self.barriers)
+        REMOVE_BARRIER_BUTTON.selected = False
 
     def next_turn(self):
         hide_piece_buttons(self.screen, self.active_buttons)
@@ -150,6 +151,7 @@ class TurnManager:
         self.board.highlight_fields(self.current_player, self.movement_options)
 
     def show_power_targets(self):
+
         self.current_target_fields = self.power.get_target_fields(self.pieces, self.barriers, self.board)
         self.board.highlight_fields(self.current_player, self.current_target_fields)
 
@@ -186,7 +188,8 @@ class TurnManager:
         if self.current_piece and self.has_moved:
             show_end_turn_button(self.screen, self.active_buttons)
             show_power_button(self.screen, self.active_buttons)
-
+        elif self.current_piece and self.power and self.get_current_state() == 'select power target':
+            self.reset_power()
         else:
             self.reset_piece_selection()
 
@@ -195,10 +198,10 @@ class TurnManager:
         field = self.board.get_mouse_field(mouse)
         button = get_mouse_button(self.active_buttons, mouse)
 
-        if field:
-            return field
-        elif button:
+        if button:
             return button
+        elif field:
+            return field
         else:
             return None
 
@@ -208,6 +211,8 @@ class TurnManager:
 
     def reset_power(self):
 
+        fields_to_redraw = []
+
         for possible_target in [self.power.selected_piece_1,
                                 self.power.selected_piece_2,
                                 self.power.selected_barrier_1,
@@ -216,10 +221,12 @@ class TurnManager:
                                 self.power.selected_field_2]:
             if possible_target:
                 if type(possible_target) == Field:
+                    fields_to_redraw.append(possible_target)
 
-                    self.board.redraw_field(possible_target, self.current_player.colour_rgb)
                 else:
-                    self.board.redraw_field(possible_target.location, self.current_player.colour_rgb)
+                    fields_to_redraw.append(possible_target.location)
+
+        fields_to_redraw += self.current_target_fields
 
         hide_piece_buttons(self.screen, self.active_buttons)
 
@@ -227,10 +234,14 @@ class TurnManager:
         self.has_used_power = False
 
         if self.has_moved:
+            for field in fields_to_redraw:
+                self.board.redraw_field(field, self.current_player.colour_rgb)
             show_end_turn_button(self.screen, self.active_buttons)
             show_power_button(self.screen, self.active_buttons)
             self.new_state('select use power or end turn')
         else:
+            for field in fields_to_redraw:
+                self.board.redraw_field(field, BACKGROUND_BOARD)
             show_piece_buttons(self.screen, self.active_buttons)
             self.new_state('select move or use power')
 
@@ -238,7 +249,6 @@ class TurnManager:
     def do_click_action(self, mouse):
         state = self.get_current_state()
         selected_entity = self.detect_click_location(mouse)
-        print(selected_entity)
         if selected_entity:
             if type(selected_entity) == Field:
                 self.do_field_action(selected_entity)
@@ -271,7 +281,7 @@ class TurnManager:
             if field in self.movement_options:
                 self.move_piece(field)
             else:
-                self.reset_piece_selection()
+                self.random_click()
 
         elif state == 'select power target':
             if field in self.current_target_fields:
@@ -293,7 +303,6 @@ class TurnManager:
                 self.remove_zaopeng_barrier(field)
                 self.next_turn()
 
-
         elif state == 'select use power or end turn':
             self.random_click()
 
@@ -301,7 +310,7 @@ class TurnManager:
             self.reset_power()
 
         else:
-            self.reset_piece_selection()
+            self.random_click()
 
     def select_power(self, button):
         self.power = button.power
@@ -311,7 +320,6 @@ class TurnManager:
         self.show_power_targets()
 
     def do_button_action(self, button):
-        print(self.active_buttons)
         state = self.get_current_state()
         if button.text == "MOVE":
             self.show_movement_options()
@@ -322,10 +330,12 @@ class TurnManager:
                 self.show_power_options()
             elif self.current_piece.type == 'Heir':
                 self.power = self.current_piece.power
+                hide_piece_buttons(self.screen, self.active_buttons)
+                show_reset_selection_button(self.screen, self.active_buttons)
+
                 self.show_power_targets()
                 self.new_state('select power target')
         elif type(button) == PowerButton:
-            print("Entering..")
 
             self.select_power(button)
 
@@ -338,15 +348,20 @@ class TurnManager:
         elif button.text == "RESET SELECTION":
             self.reset_power()
         elif button.text == "PLACE BARRIER":
+            button.selected = True
+            REMOVE_BARRIER_BUTTON.selected = False
             self.new_state('place barrier')
         elif button.text == "REMOVE BARRIER":
             self.new_state('remove barrier')
+            button.selected = True
+            PLACE_BARRIER_BUTTON.selected = False
+
         else:
             if state in {'select power', 'confirm or reset'}:
                 self.reset_power()
 
             else:
-                self.reset_piece_selection()
+                self.random_click()
 
 
 

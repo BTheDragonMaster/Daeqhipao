@@ -16,6 +16,7 @@ class Button:
         self.set_text_position()
         self.set_font()
         self.rendered_text = self.font.render(text, True, BUTTON_TEXT_COLOUR)
+        self.selected = False
 
     def __hash__(self):
         return self.text
@@ -129,7 +130,7 @@ REMOVE_BARRIER_BUTTON = RemoveBarrierButton()
 
 def highlight_buttons(active_buttons, screen, mouse):
     for button in active_buttons:
-        if button.rectangle.collidepoint(mouse):
+        if button.rectangle.collidepoint(mouse) or button.selected:
             button.highlight(screen)
         else:
             button.draw(screen)
@@ -220,6 +221,12 @@ def show_place_barrier_button(screen, active_buttons):
 
     PLACE_BARRIER_BUTTON.draw(screen)
     active_buttons.append(PLACE_BARRIER_BUTTON)
+
+def hide_remove_barrier_button(screen, active_buttons):
+    hide_button(REMOVE_BARRIER_BUTTON, screen, active_buttons)
+
+def hide_place_barrier_button(screen, active_buttons):
+    hide_button(PLACE_BARRIER_BUTTON, screen, active_buttons)
 
 def hide_button(button, screen, active_buttons):
     try:

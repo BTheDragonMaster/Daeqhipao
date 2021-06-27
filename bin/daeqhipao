@@ -69,12 +69,13 @@ while running:
         elif event.type == MOUSEBUTTONDOWN:
             mouse = pygame.mouse.get_pos()
             turn_manager.do_click_action(mouse)
+            print(turn_manager.get_current_state())
 
     mouse = pygame.mouse.get_pos()
     if not turn_manager.current_piece:
         board.highlight_field(mouse)
 
-    highlight_buttons(active_buttons, screen, mouse)
+    highlight_buttons(turn_manager.active_buttons, screen, mouse)
     pygame.display.update()
 
 pygame.quit()
