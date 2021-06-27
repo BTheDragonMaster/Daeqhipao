@@ -59,6 +59,10 @@ class MoveButton(Button):
 
         super().__init__("MOVE", position, dimensions)
 
+class PowerButton(Button):
+    def __init__(self, position, dimensions, power):
+        self.power = power
+        super().__init__(power.name, position, dimensions)
 
 class UsePowerButton(Button):
     def __init__(self):
@@ -89,6 +93,28 @@ class ConfirmButton(Button):
 
         super().__init__("CONFIRM", position, dimensions)
 
+class BackButton(Button):
+    def __init__(self):
+        position = (int(0.1 * HEIGHT), int(0.90 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("BACK", position, dimensions)
+
+class PlaceBarrierButton(Button):
+    def __init__(self):
+        position = (int(0.7 * HEIGHT), int(0.85 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("PLACE BARRIER", position, dimensions)
+
+class RemoveBarrierButton(Button):
+    def __init__(self):
+        position = (int(0.7 * HEIGHT), int(0.90 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("REMOVE BARRIER", position, dimensions)
+
+
 
 
 MOVE_BUTTON = MoveButton()
@@ -96,6 +122,9 @@ POWER_BUTTON = UsePowerButton()
 END_TURN_BUTTON = EndTurnButton()
 CONFIRM_BUTTON = ConfirmButton()
 RESET_SELECTION_BUTTON = ResetSelectionButton()
+BACK_BUTTON = BackButton()
+PLACE_BARRIER_BUTTON = PlaceBarrierButton()
+REMOVE_BARRIER_BUTTON = RemoveBarrierButton()
 
 
 def highlight_buttons(active_buttons, screen, mouse):
@@ -145,6 +174,13 @@ def show_reset_selection_button(screen, active_buttons):
     RESET_SELECTION_BUTTON.draw(screen)
     active_buttons.append(RESET_SELECTION_BUTTON)
 
+def show_back_button(screen, active_buttons):
+    BACK_BUTTON.draw(screen)
+    active_buttons.append(BACK_BUTTON)
+
+def hide_back_button(screen, active_buttons):
+    hide_button(BACK_BUTTON, screen, active_buttons)
+
 
 def hide_piece_buttons(screen, active_buttons):
     hide_button(MOVE_BUTTON, screen, active_buttons)
@@ -152,7 +188,18 @@ def hide_piece_buttons(screen, active_buttons):
     hide_button(END_TURN_BUTTON, screen, active_buttons)
     hide_button(RESET_SELECTION_BUTTON, screen, active_buttons)
     hide_button(CONFIRM_BUTTON, screen, active_buttons)
+    hide_button(PLACE_BARRIER_BUTTON, screen, active_buttons)
+    hide_button(REMOVE_BARRIER_BUTTON, screen, active_buttons)
+    hide_power_buttons(screen, active_buttons)
 
+def hide_power_buttons(screen, active_buttons):
+    buttons_to_remove = []
+    for i, button in enumerate(active_buttons[:]):
+        if type(button) == PowerButton:
+            buttons_to_remove.append(button)
+
+    for button in buttons_to_remove:
+        hide_button(button, screen, active_buttons)
 
 def hide_move_button(screen, active_buttons):
     hide_button(MOVE_BUTTON, screen, active_buttons)
@@ -160,6 +207,19 @@ def hide_move_button(screen, active_buttons):
 def hide_power_button(screen, active_buttons):
     hide_button(POWER_BUTTON, screen, active_buttons)
 
+def show_power_choice_button(screen, active_buttons, button):
+    button.draw(screen)
+    active_buttons.append(button)
+
+def show_remove_barrier_button(screen, active_buttons):
+
+    REMOVE_BARRIER_BUTTON.draw(screen)
+    active_buttons.append(REMOVE_BARRIER_BUTTON)
+
+def show_place_barrier_button(screen, active_buttons):
+
+    PLACE_BARRIER_BUTTON.draw(screen)
+    active_buttons.append(PLACE_BARRIER_BUTTON)
 
 def hide_button(button, screen, active_buttons):
     try:

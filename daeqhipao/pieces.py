@@ -5,13 +5,42 @@ import pygame
 
 from daeqhipao.illegal_moves import *
 from daeqhipao.style import *
-from daeqhipao.board import *
+from daeqhipao.powers import *
 import images.symbols
 import copy
 
-
-
 SYMBOL_DIR = os.path.dirname(images.symbols.__file__)
+
+class Pieces:
+    def __init__(self, pieces):
+        self.pieces = pieces
+        self.active_pieces = []
+        self.passive_pieces = []
+        self.set_active_and_passive_pieces()
+
+    def set_active_and_passive_pieces(self):
+        for piece in self.pieces:
+            if piece.active:
+                self.active_pieces.append(piece)
+            else:
+                self.passive_pieces.append(piece)
+
+    def check_zaopeng(self, player):
+        for piece in self.pieces:
+            if piece.player == player:
+                if piece.active:
+                    return False
+
+        return True
+
+    def zaopeng(self, player):
+        for piece in self.pieces:
+            if piece.player == player:
+                if not piece.oblivion:
+                    piece.active = True
+                else:
+                    piece.countdown_oblivion()
+        self.set_active_and_passive_pieces()
 
 
 class Piece:
@@ -42,6 +71,8 @@ class Piece:
         self.symbol_rectangle = None
         self.selection_nr = 0
 
+        self.movement_type = 'all'
+
 
     def __eq__(self, piece):
         if self.id == piece.id:
@@ -51,6 +82,11 @@ class Piece:
 
     def __hash__(self):
         return self.id
+
+    def get_movement_options(self, board):
+        legal_fields = self.location.get_legal_adjacent(board, self)
+
+        return legal_fields
 
     def set_piece_rectangle(self):
         x = (1 + self.location.x) * SQUARE_WIDTH + PIECE_PADDING
@@ -193,7 +229,7 @@ class Piece:
         self.liberation -= 1
         assert self.liberation >= 0
 
-    def check_immune(self, power):
+    def immune(self, power):
         if self.perception:
             return True
         
@@ -215,15 +251,15 @@ class Piece:
     def check_legal_move_general(self, target_location, board):
 
         if target_location.ocean and self.gender == 'F' and not \
-           self.check_immune('Ocean'):
+           self.immune('Ocean'):
                 raise IllegalMove('ocean')
 
         elif target_location.drought and self.gender == 'M' and not \
-             self.check_immune('Drought'):
+             self.immune('Drought'):
             raise IllegalMove('drought')
 
         elif target_location.flame and self.player not in \
-             target_location.flame_casters and not self.check_immune("Flame"):
+             target_location.flame_casters and not self.immune("Flame"):
             raise IllegalMove('flame')
 
         elif target_location.occupied:
@@ -237,6 +273,10 @@ class Piece:
             raise IllegalMove('temple')
 
     def move(self, target_location, board):
+        original_x = self.location.x
+        original_y = self.location.y
+
+
         x_diff = target_location.x - self.location.x
         y_diff = target_location.y - self.location.y
 
@@ -249,12 +289,15 @@ class Piece:
 
         self.piece_rectangle = self.piece_rectangle.move(x_diff * SQUARE_WIDTH, y_diff * SQUARE_WIDTH)
         self.symbol_rectangle = self.symbol_rectangle.move(x_diff * SQUARE_WIDTH, y_diff * SQUARE_WIDTH)
+        origin_square = board.get_field(original_x, original_y)
+
+        board.redraw_field(origin_square, BACKGROUND_BOARD)
         board.draw_piece(self)
 
     def select_piece(self, piece, power):
 
 
-        if piece.check_immune(power):
+        if piece.immune(power):
             raise Immune("%s is immune to the power %s." % (piece, power))
 
 
@@ -262,83 +305,80 @@ class God(Piece):
     def __init__(self, nr, player):
         Piece.__init__(self, nr, player)
         self.type = 'God'
+        self.movement_type = 'all'
 
-    def get_movement_options(self, board):
-        legal_fields = self.location.get_legal_adjacent(board, self.player, 'all')
-
-        return legal_fields
         
 #==============================================================================
 
 class Builder(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'F'
+        self.gender = 'female'
         self.name = "Builder"
-        self.powers = ["Earth", "Ocean", "Sky", "Sun"]
+        self.powers = [EarthPower(self), OceanPower(self), SkyPower(self), SunPower(self)]
         self.symbol = 'e'
         self.load_symbol_image()
 
 class Alchemist(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'F'
+        self.gender = 'female'
         self.name = "Alchemist"
-        self.powers = ["Metalmaker", "Bloodmaker", "Fog", "Flame"]
+        self.powers = [MetalmakerPower(self), BloodmakerPower(self), FogPower(self), FlamePower(self)]
         self.symbol = 'g'
         self.load_symbol_image()
 
 class Connector(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'F'
+        self.gender = 'female'
         self.name = "Connector"
-        self.powers = ["Union", "Impression", "Communication", "Familiarity"]
+        self.powers = [UnionPower(self), ImpressionPower(self), CommunicationPower(self), FamiliarityPower(self)]
         self.symbol = 'b'
         self.load_symbol_image()
         
 class Wiper(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'F'
+        self.gender = 'female'
         self.name = 'Wiper'
-        self.powers = ["Death", "Blindness", "Oblivion", "Liberation"]
+        self.powers = [DeathPower(self), BlindnessPower(self), OblivionPower(self), LiberationPower(self)]
         self.symbol = 'd'
         self.load_symbol_image()
 
 class Mover(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'M'
+        self.gender = 'male'
         self.name = 'Mover'
-        self.powers = ["Quake", "Wave", "Wind", "Shadow"]
+        self.powers = [QuakePower(self), WavePower(self), WindPower(self), ShadowPower(self)]
         self.symbol = 'f'
         self.load_symbol_image()
 
 class Consumer(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'M'
+        self.gender = 'male'
         self.name = 'Consumer'
-        self.powers = ["Void", "Drought", "End", "Night"]
+        self.powers = [VoidPower(self), DroughtPower(self), EndPower(self), NightPower(self)]
         self.symbol = 'h'
         self.load_symbol_image()
 
 class Gifter(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'M'
+        self.gender = 'male'
         self.name = 'Gifter'
-        self.powers = ["Life", "Perception", "Mind", "Legacy"]
+        self.powers = [LifePower(self), PerceptionPower(self), MindPower(self), LegacyPower(self)]
         self.symbol = 'a'
         self.load_symbol_image()
 
 class Director(God):
     def __init__(self, nr, player):
         God.__init__(self, nr, player)
-        self.gender = 'M'
+        self.gender = 'male'
         self.name = 'Director'
-        self.powers = ["Time", "Illusion", "Idea", "Metamorphosis"]
+        self.powers = [TimePower(self), IllusionPower(self), IdeaPower(self), MetamorphosisPower(self)]
         self.symbol = 'c'
         self.load_symbol_image()
 
@@ -347,24 +387,17 @@ class Director(God):
 class FemaleHeir(Piece):
     def __init__(self, nr, player):
         Piece.__init__(self, nr, player)
-        self.gender = 'F'
+        self.gender = 'female'
         self.type = 'Heir'
-
-    def get_movement_options(self, board):
-        legal_fields = self.location.get_legal_adjacent(board, self.player, 'horizontal')
-
-        return legal_fields
+        self.movement_type = 'horizontal'
 
 class MaleHeir(Piece):
     def __init__(self, nr, player):
         Piece.__init__(self, nr, player)
-        self.gender = 'M'
+        self.gender = 'male'
         self.type = 'Heir'
+        self.movement_type = 'diagonal'
 
-    def get_movement_options(self, board):
-        legal_fields = self.location.get_legal_adjacent(board, self.player, 'diagonal')
-
-        return legal_fields
 
 #==============================================================================
 
@@ -374,61 +407,7 @@ class Union(FemaleHeir):
         self.name = "Union"
         self.symbol = 'm'
         self.load_symbol_image()
-        self.selection_nr = 2
-        self.selections = ['piece', 'piece']
-
-    def reset_selection(self):
-        self.piece_1 = None
-        self.piece_2 = None
-        self.selection_nr = 2
-
-    def use_power(self, active_pieces, passive_pieces):
-        self.select_piece(self.piece_1, self.name)
-        self.select_piece(self.piece_2, self.name)
-
-        if self.piece_1.active != self.piece_2.active:
-            raise IllegalPower('union')
-
-        self.piece_1.activate_union(self.piece_2)
-        self.piece_2.activate_union(self.piece_1)
-        
-        self.sleep(active_pieces, passive_pieces)
-        self.selection_nr = 2
-
-    def select_piece_1(self, piece, board):
-        board.highlight_field_strong(self.player, piece.location)
-        self.piece_1 = piece
-        self.selection_nr -= 1
-
-    def select_piece_2(self, piece, board):
-        board.highlight_field_strong(self.player, piece.location)
-        self.piece_2 = piece
-        self.selection_nr -= 1
-
-    def set_target_fields(self, active_pieces, passive_pieces):
-        self.target_fields = []
-
-        if len(active_pieces) >= 3:
-            for piece in active_pieces:
-                if piece != self:
-                    self.target_fields.append(piece.location)
-
-        if len(passive_pieces) >= 2:
-            for piece in passive_pieces:
-                if piece != self:
-                    self.target_fields.append(piece.location)
-
-    def set_target_fields_2(self, active_pieces, passive_pieces):
-        self.target_fields_2 = []
-        if self.piece_1.active:
-            for piece in active_pieces:
-                if piece != self.piece_1 and piece != self:
-                    self.target_fields_2.append(piece)
-
-        else:
-            for piece in passive_pieces:
-                if piece != self.piece_1 and piece != self:
-                    self.target_fields_2.append(piece)
+        self.power = UnionPower(self)
 
 
 class Impression(FemaleHeir):
@@ -437,6 +416,7 @@ class Impression(FemaleHeir):
         self.name = "Impression"
         self.symbol = 'n'
         self.load_symbol_image()
+        self.power = ImpressionPower(self)
         self.selections = ['piece']
 
     def use_power(self, piece, board):
@@ -465,6 +445,7 @@ class Communication(FemaleHeir):
         self.symbol = 'o'
         self.load_symbol_image()
         self.selections = ['piece']
+        self.power = CommunicationPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -479,6 +460,7 @@ class Familiarity(FemaleHeir):
         self.name = "Familiarity"
         self.symbol = 'p'
         self.load_symbol_image()
+        self.power = FamiliarityPower(self)
 
     def use_power(self, piece, pieces):
         raise NotImplementedError
@@ -489,6 +471,7 @@ class Death(FemaleHeir):
         self.name = "Death"
         self.symbol = 'u'
         self.load_symbol_image()
+        self.power = DeathPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -505,6 +488,7 @@ class Blindness(FemaleHeir):
         self.name = "Blindness"
         self.symbol = 'v'
         self.load_symbol_image()
+        self.power = BlindnessPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -519,6 +503,7 @@ class Oblivion(FemaleHeir):
         self.symbol = 'w'
         self.load_symbol_image()
         self.selections = ['piece']
+        self.power = OblivionPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -536,6 +521,7 @@ class Liberation(FemaleHeir):
         self.symbol = 'x'
         self.load_symbol_image()
         self.selections = ['piece']
+        self.power = LiberationPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -551,6 +537,7 @@ class Earth(FemaleHeir):
         self.symbol = 'y'
         self.load_symbol_image()
         self.selections = ['field']
+        self.power = EarthPower(self)
 
     def use_power(self, barriers, board, field_1, field_2=None):
         barriers.place_barrier(field_1, board)
@@ -565,6 +552,7 @@ class Ocean(FemaleHeir):
         self.name = "Ocean"
         self.symbol = 'z'
         self.load_symbol_image()
+        self.power = OceanPower(self)
 
     def use_power(self, field, board):
         board.check_field(field)
@@ -582,6 +570,7 @@ class Sky(FemaleHeir):
         self.name = "Sky"
         self.symbol = 'A'
         self.load_symbol_image()
+        self.power = SkyPower(self)
 
     def use_power(self, piece, board):
         self.select_piece(piece, self.name)
@@ -623,6 +612,7 @@ class Sun(FemaleHeir):
         self.name = "Sun"
         self.symbol = 'B'
         self.load_symbol_image()
+        self.power = SunPower(self)
 
     def use_power(self, field, board):
         legal_locations = self.find_legal_locations(field, board)
@@ -696,6 +686,7 @@ class Metalmaker(FemaleHeir):
         self.name = "Metalmaker"
         self.symbol = 'G'
         self.load_symbol_image()
+        self.power = MetalmakerPower(self)
 
     def use_power(self, field, barriers, board):
         
@@ -719,6 +710,7 @@ class Bloodmaker(FemaleHeir):
         self.name = "Bloodmaker"
         self.symbol = 'H'
         self.load_symbol_image()
+        self.power = BloodmakerPower(self)
 
     def use_power(self, piece, barrier_field, barriers, board):
         self.select_piece(piece, self.name)
@@ -744,6 +736,7 @@ class Fog(FemaleHeir):
         self.name = "Fog"
         self.symbol = 'I'
         self.load_symbol_image()
+        self.power = FogPower(self)
 
     def use_power(self, piece_1, piece_2, board):
         self.select_piece(piece_1, self.name)
@@ -769,9 +762,10 @@ class Flame(FemaleHeir):
         self.name = "Flame"
         self.symbol = 'J'
         self.load_symbol_image()
+        self.power = FlamePower(self)
 
     def use_power(self, board):
-        for field in find_flame_locations(board):
+        for field in board.find_flame_locations():
             board.get_field(field).activate_flame(self)
 
         self.sleep()
@@ -807,6 +801,7 @@ class Life(MaleHeir):
         self.name = "Life"
         self.symbol = 'i'
         self.load_symbol_image()
+        self.power = LifePower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -822,6 +817,7 @@ class Perception(MaleHeir):
         self.name = "Perception"
         self.symbol = 'j'
         self.load_symbol_image()
+        self.power = PerceptionPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -835,6 +831,7 @@ class Mind(MaleHeir):
         self.name = "Mind"
         self.symbol = 'k'
         self.load_symbol_image()
+        self.power = MindPower(self)
 
     def use_power(self, board):
         temple = board.get_field(self.player.temple)
@@ -848,6 +845,7 @@ class Legacy(MaleHeir):
         self.name = "Legacy"
         self.symbol = 'l'
         self.load_symbol_image()
+        self.power = LegacyPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -863,6 +861,7 @@ class Time(MaleHeir):
         self.name = "Time"
         self.symbol = 'q'
         self.load_symbol_image()
+        self.power = TimePower(self)
 
     def use_power(self, player):
         
@@ -877,6 +876,7 @@ class Illusion(MaleHeir):
         self.name = "Illusion"
         self.symbol = 'r'
         self.load_symbol_image()
+        self.power = IllusionPower(self)
 
     def use_power(self, piece):
 
@@ -892,6 +892,7 @@ class Idea(MaleHeir):
         self.name = "Idea"
         self.symbol = 's'
         self.load_symbol_image()
+        self.power = IdeaPower(self)
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -905,6 +906,7 @@ class Metamorphosis(MaleHeir):
         self.name = "Metamorphosis"
         self.symbol = 't'
         self.load_symbol_image()
+        self.power = MetamorphosisPower(self)
 
     def use_power(self, piece_1, piece_2, board, players):
         if piece_1.player == self.player:
@@ -938,6 +940,7 @@ class Quake(MaleHeir):
         self.name = "Quake"
         self.symbol = 'C'
         self.load_symbol_image()
+        self.power = QuakePower(self)
 
 
 class Wave(MaleHeir):
@@ -946,6 +949,7 @@ class Wave(MaleHeir):
         self.name = "Wave"
         self.symbol = 'D'
         self.load_symbol_image()
+        self.power = WavePower(self)
 
 
 class Wind(MaleHeir):
@@ -954,6 +958,7 @@ class Wind(MaleHeir):
         self.name = "Wind"
         self.symbol = 'E'
         self.load_symbol_image()
+        self.power = WindPower(self)
 
 
 class Shadow(MaleHeir):
@@ -962,6 +967,7 @@ class Shadow(MaleHeir):
         self.name = "Shadow"
         self.symbol = 'F'
         self.load_symbol_image()
+        self.power = ShadowPower(self)
 
 
 class Void(MaleHeir):
@@ -970,6 +976,7 @@ class Void(MaleHeir):
         self.name = "Void"
         self.symbol = 'K'
         self.load_symbol_image()
+        self.power = VoidPower(self)
 
 
 class Drought(MaleHeir):
@@ -978,6 +985,7 @@ class Drought(MaleHeir):
         self.name = "Drought"
         self.symbol = 'L'
         self.load_symbol_image()
+        self.power = DroughtPower(self)
 
 
 class End(MaleHeir):
@@ -986,6 +994,7 @@ class End(MaleHeir):
         self.name = "End"
         self.symbol = 'M'
         self.load_symbol_image()
+        self.power = EndPower(self)
 
 
 
@@ -995,3 +1004,4 @@ class Night(MaleHeir):
         self.name = "Night"
         self.symbol = 'N'
         self.load_symbol_image()
+        self.power = NightPower(self)

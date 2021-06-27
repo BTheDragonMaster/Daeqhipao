@@ -5,15 +5,21 @@ Gaming board
 """
 import os
 
+import pygame
+import images.pieces
+
 from daeqhipao.illegal_moves import *
 from daeqhipao.board_properties import BOARD_PROPERTIES
 from daeqhipao.style import *
-import pygame
-import images.pieces
+from daeqhipao.fields import Field
+from daeqhipao.barriers import Barrier
+from daeqhipao.pieces import Piece
+
 
 PIECE_IMAGE_DIR = os.path.dirname(images.pieces.__file__)
 IMAGE_DIR = os.path.dirname(images.__file__)
 LOGO = os.path.join(IMAGE_DIR, 'logo.png')
+BARRIER_LOGO = os.path.join(IMAGE_DIR, 'barrier.png')
 
 
 class Board:
@@ -89,6 +95,15 @@ class Board:
         else:
             return None
 
+    def draw_barrier(self, barrier):
+        barrier_image = pygame.image.load(BARRIER_LOGO)
+        barrier_image_scaled = pygame.transform.smoothscale(barrier_image, (BARRIER_SIZE, BARRIER_SIZE))
+
+        self.screen.blit(barrier_image_scaled, barrier.rectangle)
+
+        self.draw_frame()
+
+
     def highlight_move_options(self, piece):
         legal_fields = piece.get_movement_options(self)
         for legal_field in legal_fields:
@@ -96,10 +111,26 @@ class Board:
 
         self.draw_frame()
 
+    def redraw_field(self, field, colour):
+        field.redraw(self.screen, colour)
+        if field.piece:
+            self.draw_piece(field.piece)
+
+        elif field.barrier:
+            self.draw_barrier(field.barrier)
+
+        self.draw_frame()
+
     def highlight_fields(self, player, fields):
 
         for field in fields:
             field.highlight(self.screen, player, self)
+
+        self.draw_frame()
+
+    def highlight_fields_strong(self, player, fields):
+        for field in fields:
+            field.highlight_strong(self.screen, player, self)
 
         self.draw_frame()
 
@@ -120,6 +151,8 @@ class Board:
                     self.draw_frame()
                     if field.piece:
                         self.draw_piece(field.piece)
+                    elif field.barrier:
+                        self.draw_barrier(field.barrier)
 
     def calc_piece_offset(self, field):
         x_offset = (1 + field.x) * SQUARE_WIDTH + PIECE_PADDING
@@ -215,207 +248,36 @@ class Board:
         except IndexError:
             return None
 
+    def swap_objects(self, object_1, object_2):
+        source_x = object_1.location.x
+        source_y = object_1.location.y
 
-class Barriers:
-    def __init__(self):
-        self.count = 0
-        
-    def place_barrier(self, field, board):
-        board.check_field(field)
-        if self.count == 3:
-            raise IllegalBarrier('count')
-        if board.get_field(field).occupied:
-            raise IllegalBarrier('occupied')
-        if board.get_field(field).type == "Temple":
-            raise IllegalBarrier('temple')
+        target_x = object_2.location.x
+        target_y = object_2.location.y
 
-        board.get_field(field).barrier = True
-        board.get_field(field).check_occupied()
-        
-        self.count += 1
+        source_location = self.get_field(source_x, source_y)
+        target_location = self.get_field(target_x, target_y)
 
-    def move_barrier(self, old_field, new_field, board):
-        board.check_field(new_field)
-        board.check_field(old_field)
-        
-        if board.get_field(new_field).occupied:
-            raise IllegalBarrier('occupied')
-        if not board.get_field(old_field).barrier:
-            raise IllegalBarrier('no barrier')
-        if board.get_field(new_field).type == "Temple":
-            raise IllegalBarrier('temple')
+        if type(object_1) == Barrier:
+            source_location.barrier = None
+            target_location.barrier = object_1
 
-        board.get_field(old_field).barrier = False
-        board.get_field(old_field).check_occupied()
+        elif issubclass(type(object_1), Piece):
+            source_location.piece = None
+            target_location.piece = object_1
 
-        board.get_field(new_field).barrier = True
-        board.get_field(new_field).check_occupied()
+        if type(object_2) == Barrier:
+            if not type(object_1) == Barrier:
+                target_location.barrier = None
+            source_location.barrier = object_2
 
-    def remove_barrier(self, field, board):
-        board.check_field(field)
-        if self.count == 0:
-            raise IllegalBarrier('none')
-        if not board.get_field(field).barrier:
-            raise IllegalBarrier('no barrier')
+        elif issubclass(type(object_2), Piece):
+            if not issubclass(type(object_1), Piece):
+                target_location.piece = None
+            source_location.piece = object_2
 
-        board.get_field(field).barrier = False
-        board.get_field(field).check_occupied()
+        object_1.location = target_location
+        object_2.location = source_location
 
-        self.count -= 1
-        
-
-class Field:
-    """
-    Field types:
-        field
-        no field
-        temple square
-        temple area
-        starting square
-        barrier square
-
-    Owners:
-        Player (1, 2, 3, 4)
-        None
-
-    """
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.owner = None
-        self.type = 'field'
-
-        self.piece = None
-        self.barrier = False
-        self.occupied = False
-        
-        self.ocean = False
-        self.drought = False
-        self.flame = False
-        self.flame_casters = set([])
-        
-        self.type = 'Regular'
-        self.rectangle = None
-
-    def __repr__(self):
-        return "%d-%d" % (self.x, self.y)
-
-    def __eq__(self, field):
-        return self.x == field.x and self.y == field.y
-
-    def __hash__(self):
-        return hash((self.x, self.y))
-
-    def set_rectangle(self, square_width):
-        x = (self.x + 1) * square_width
-        y = (self.y + 1) * square_width
-        self.rectangle = pygame.Rect(x, y, square_width, square_width)
-
-    def draw(self, screen, hovered):
-        if hovered:
-            pygame.draw.rect(screen, HIGHLIGHT_BOARD, self.rectangle)
-        else:
-            pygame.draw.rect(screen, BACKGROUND_BOARD, self.rectangle)
-
-    def highlight(self, screen, player, board):
-        pygame.draw.rect(screen, player.colour_rgb, self.rectangle)
-        if self.piece:
-            board.draw_piece(self.piece)
-
-    def highlight_strong(self, screen, player, board):
-        pygame.draw.rect(screen, player.colour_rgb_strong, self.rectangle)
-        if self.piece:
-            board.draw_piece(self.piece)
-
-    def set_ownership(self, player):
-        self.owner = player
-
-    def in_temple_area(self):
-        if self.type == 'temple area' or self.type == 'starting square':
-            return True
-        else:
-            return False
-
-    def activate_flame(self, piece):
-        self.flame = True
-        self.flame_casters.add(piece.player())
-
-    def deactivate_flame(self, piece):
-        self.flame = False
-        self.flame_casters.remove(piece.player())
-
-    def check_occupied(self):
-        if self.piece or self.barrier:
-            self.occupied = True
-        else:
-            self.occupied = False
-
-    def check_adjacent(self, field, board):
-        diff_x = abs(self.x - field.x)
-        diff_y = abs(self.y - field.y)
-
-        if diff_x > 1:
-            return False
-        elif diff_y > 1:
-            return False
-        elif diff_x == 0 and diff_y == 0:
-            return False
-        else:
-            return True
-
-    def get_adjacent(self, board, type='all'):
-
-        adjacent = []
-        if type == 'horizontal':
-
-            coord_combinations = [(self.x - 1, self.y),
-                                  (self.x + 1, self.y),
-                                  (self.x, self.y - 1),
-                                  (self.x, self.y + 1)]
-
-        elif type == 'diagonal':
-            coord_combinations = [(self.x - 1, self.y - 1),
-                                  (self.x + 1, self.y - 1),
-                                  (self.x - 1, self.y + 1),
-                                  (self.x + 1, self.y + 1)]
-
-        elif type == 'all':
-            coord_combinations = [(self.x - 1, self.y),
-                                  (self.x + 1, self.y),
-                                  (self.x, self.y - 1),
-                                  (self.x, self.y + 1),
-                                  (self.x - 1, self.y - 1),
-                                  (self.x + 1, self.y - 1),
-                                  (self.x - 1, self.y + 1),
-                                  (self.x + 1, self.y + 1)]
-
-        for coord_combination in coord_combinations:
-            x = coord_combination[0]
-            y = coord_combination[1]
-
-            try:
-
-                field = board.board[x][y]
-
-                if field.type != 'no field':
-                    adjacent.append(field)
-            except IndexError:
-                pass
-
-        return adjacent
-
-    def get_legal_adjacent(self, board, player, type='all'):
-
-        adjacent = []
-
-        fields = self.get_adjacent(board, type=type)
-
-        for field in fields:
-
-            if field.type != 'no field' and not field.piece and not field.barrier and not \
-                    (field.type == 'temple square' and field.owner == player):
-                adjacent.append(field)
-
-        return adjacent
 
 
