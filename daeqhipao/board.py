@@ -315,8 +315,7 @@ class Field:
         if self.piece:
             board.draw_piece(self.piece)
 
-
-    def set_owner(self, player):
+    def set_ownership(self, player):
         self.owner = player
 
     def in_temple_area(self):
@@ -386,10 +385,25 @@ class Field:
 
                 field = board.board[x][y]
 
-                if field.type != 'no field' and not field.piece:
+                if field.type != 'no field':
                     adjacent.append(field)
             except IndexError:
                 pass
+
+        return adjacent
+
+    def get_legal_adjacent(self, board, player, type='all'):
+
+        adjacent = []
+
+        fields = self.get_adjacent(board, type=type)
+
+        for field in fields:
+
+            if field.type != 'no field' and not field.piece and not field.barrier and not \
+                    (field.type == 'temple square' and field.owner == player):
+                adjacent.append(field)
+
 
         return adjacent
 

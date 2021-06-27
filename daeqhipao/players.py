@@ -109,13 +109,13 @@ class Player:
 
     def set_field_ownership(self, board):
         x, y = self.temple
-        board[x][y].set_ownership(self)
+        board.board[x][y].set_ownership(self)
 
         for x, y in self.starting_squares:
-            board[x][y].set_ownership(self)
+            board.board[x][y].set_ownership(self)
 
         for x, y in self.temple_area:
-            board[x][y].set_ownership(self)
+            board.board[x][y].set_ownership(self)
 
 
     def assign_location(self, piece, location, board):

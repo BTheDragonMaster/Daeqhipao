@@ -257,7 +257,7 @@ class God(Piece):
         self.type = 'God'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent(board, 'all')
+        legal_fields = self.location.get_legal_adjacent(board, self.player, 'all')
 
         return legal_fields
         
@@ -344,7 +344,7 @@ class FemaleHeir(Piece):
         self.type = 'Heir'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent(board, 'horizontal')
+        legal_fields = self.location.get_legal_adjacent(board, self.player, 'horizontal')
 
         return legal_fields
 
@@ -355,7 +355,7 @@ class MaleHeir(Piece):
         self.type = 'Heir'
 
     def get_movement_options(self, board):
-        legal_fields = self.location.get_adjacent(board, 'diagonal')
+        legal_fields = self.location.get_legal_adjacent(board, self.player, 'diagonal')
 
         return legal_fields
 
