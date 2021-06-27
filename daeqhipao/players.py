@@ -23,6 +23,7 @@ class Player:
         self.id = player_id
         self.colour = PLAYER_PROPERTIES.player_to_colour[self.id]
         self.colour_rgb = PLAYER_PROPERTIES.player_to_colour_rgb[self.id]
+        self.colour_rgb_strong = PLAYER_PROPERTIES.player_to_colour_rgb_strong[self.id]
         self.heirs = []
         self.god = None
         self.name = None

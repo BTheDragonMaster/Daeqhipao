@@ -18,7 +18,6 @@ LOGO = os.path.join(IMAGE_DIR, 'logo.png')
 
 class Board:
 
-
     def __init__(self, screen):
 
         self.screen = screen
@@ -33,8 +32,6 @@ class Board:
 
         self.assign_field_types()
         self.set_rectangles()
-
-
 
     def draw_frame(self):
         self.draw_board_line((5, 0), (6, 0))
@@ -99,6 +96,17 @@ class Board:
 
         self.draw_frame()
 
+    def highlight_fields(self, player, fields):
+
+        for field in fields:
+            field.highlight(self.screen, player, self)
+
+        self.draw_frame()
+
+    def highlight_field_strong(self, player, field):
+        field.highlight_strong(self.screen, player, self)
+        self.draw_frame()
+
     def highlight_field(self, mouse):
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
@@ -155,9 +163,9 @@ class Board:
                 if field.piece:
                     self.draw_piece(field.piece)
 
-    def draw_board(self, board):
+    def draw_board(self):
         self.draw_frame()
-        self.draw_pieces(board)
+        self.draw_pieces()
 
     def assign_field_types(self):
         for i, row in enumerate(self.board):
@@ -303,7 +311,6 @@ class Field:
         y = (self.y + 1) * square_width
         self.rectangle = pygame.Rect(x, y, square_width, square_width)
 
-
     def draw(self, screen, hovered):
         if hovered:
             pygame.draw.rect(screen, HIGHLIGHT_BOARD, self.rectangle)
@@ -312,6 +319,11 @@ class Field:
 
     def highlight(self, screen, player, board):
         pygame.draw.rect(screen, player.colour_rgb, self.rectangle)
+        if self.piece:
+            board.draw_piece(self.piece)
+
+    def highlight_strong(self, screen, player, board):
+        pygame.draw.rect(screen, player.colour_rgb_strong, self.rectangle)
         if self.piece:
             board.draw_piece(self.piece)
 
@@ -326,9 +338,9 @@ class Field:
 
     def activate_flame(self, piece):
         self.flame = True
-        self.flame_casters.append(piece.player())
+        self.flame_casters.add(piece.player())
 
-    def deactivate_flame(self):
+    def deactivate_flame(self, piece):
         self.flame = False
         self.flame_casters.remove(piece.player())
 
@@ -404,47 +416,6 @@ class Field:
                     (field.type == 'temple square' and field.owner == player):
                 adjacent.append(field)
 
-
         return adjacent
 
 
-class PhantomField(Field):
-    def __init__(self, x, y):
-        Field.__init__(self, x, y)
-
-class TempleSquare(Field):
-    def __init__(self, x, y, player):
-        Field.__init__(self, x, y)
-        self.type = 'Temple'
-        self.player = player
-        self.mind = 0
-
-    def set_mind(self, user):
-        if user.legacy_duration:
-            self.mind = 2
-        else:
-            self.mind = 1
-
-    def countdown_mind(self):
-        self.mind -= 1
-        assert mind >= 0
-
-class TempleArea(Field):
-    def __init__(self, x, y, player, starter):
-        Field.__init__(self, x, y)
-        self.player = player
-        self.type = "Temple Area"
-        self.starter = starter
-        
-        
-
-class NoField(Field):
-    def __init__(self, x, y):
-        Field.__init__(self, x, y)
-        self.type = "No field"
-
-
-
-if __name__ == "__main__":
-    board = Board()
-    board.print_board()

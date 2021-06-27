@@ -40,6 +40,7 @@ class Piece:
 
         self.piece_rectangle = None
         self.symbol_rectangle = None
+        self.selection_nr = 0
 
 
     def __eq__(self, piece):
@@ -109,12 +110,16 @@ class Piece:
 
         self.location = None
 
-    def sleep(self):
+    def sleep(self, active_pieces, passive_pieces):
         if not self.legacy_frequency:
             self.active = False
+            active_pieces.remove(self)
+            passive_pieces.append(self)
             
-    def wake(self):
+    def wake(self, active_pieces, passive_pieces):
         self.active = True
+        active_pieces.append(self)
+        passive_pieces.remove(self)
 
     def set_perception(self, user):
         if user.legacy_duration:
@@ -247,6 +252,8 @@ class Piece:
         board.draw_piece(self)
 
     def select_piece(self, piece, power):
+
+
         if piece.check_immune(power):
             raise Immune("%s is immune to the power %s." % (piece, power))
 
@@ -367,19 +374,62 @@ class Union(FemaleHeir):
         self.name = "Union"
         self.symbol = 'm'
         self.load_symbol_image()
+        self.selection_nr = 2
+        self.selections = ['piece', 'piece']
 
-    def use_power(self, piece_1, piece_2):
-        self.select_piece(piece_1, self.name)
-        self.select_piece(piece_2, self.name)
+    def reset_selection(self):
+        self.piece_1 = None
+        self.piece_2 = None
+        self.selection_nr = 2
 
-        if piece_1.active != piece_2.active:
+    def use_power(self, active_pieces, passive_pieces):
+        self.select_piece(self.piece_1, self.name)
+        self.select_piece(self.piece_2, self.name)
+
+        if self.piece_1.active != self.piece_2.active:
             raise IllegalPower('union')
 
-        piece_1.activate_union(piece_2)
-        piece_2.activate_union(piece_1)
+        self.piece_1.activate_union(self.piece_2)
+        self.piece_2.activate_union(self.piece_1)
         
-        self.sleep()
-        
+        self.sleep(active_pieces, passive_pieces)
+        self.selection_nr = 2
+
+    def select_piece_1(self, piece, board):
+        board.highlight_field_strong(self.player, piece.location)
+        self.piece_1 = piece
+        self.selection_nr -= 1
+
+    def select_piece_2(self, piece, board):
+        board.highlight_field_strong(self.player, piece.location)
+        self.piece_2 = piece
+        self.selection_nr -= 1
+
+    def set_target_fields(self, active_pieces, passive_pieces):
+        self.target_fields = []
+
+        if len(active_pieces) >= 3:
+            for piece in active_pieces:
+                if piece != self:
+                    self.target_fields.append(piece.location)
+
+        if len(passive_pieces) >= 2:
+            for piece in passive_pieces:
+                if piece != self:
+                    self.target_fields.append(piece.location)
+
+    def set_target_fields_2(self, active_pieces, passive_pieces):
+        self.target_fields_2 = []
+        if self.piece_1.active:
+            for piece in active_pieces:
+                if piece != self.piece_1 and piece != self:
+                    self.target_fields_2.append(piece)
+
+        else:
+            for piece in passive_pieces:
+                if piece != self.piece_1 and piece != self:
+                    self.target_fields_2.append(piece)
+
 
 class Impression(FemaleHeir):
     def __init__(self, nr, player):
@@ -387,6 +437,7 @@ class Impression(FemaleHeir):
         self.name = "Impression"
         self.symbol = 'n'
         self.load_symbol_image()
+        self.selections = ['piece']
 
     def use_power(self, piece, board):
         self.select_piece(piece, self.name)
@@ -413,6 +464,7 @@ class Communication(FemaleHeir):
         self.name = "Communication"
         self.symbol = 'o'
         self.load_symbol_image()
+        self.selections = ['piece']
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -466,6 +518,7 @@ class Oblivion(FemaleHeir):
         self.name = "Oblivion"
         self.symbol = 'w'
         self.load_symbol_image()
+        self.selections = ['piece']
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -482,6 +535,7 @@ class Liberation(FemaleHeir):
         self.name = "Liberation"
         self.symbol = 'x'
         self.load_symbol_image()
+        self.selections = ['piece']
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -496,8 +550,9 @@ class Earth(FemaleHeir):
         self.name = "Earth"
         self.symbol = 'y'
         self.load_symbol_image()
+        self.selections = ['field']
 
-    def use_power(self, barriers, board, field_1, field_2 = None):
+    def use_power(self, barriers, board, field_1, field_2=None):
         barriers.place_barrier(field_1, board)
         if field_2:
             barriers.place_barrier(field_2, board)

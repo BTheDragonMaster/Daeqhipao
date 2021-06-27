@@ -67,9 +67,35 @@ class UsePowerButton(Button):
 
         super().__init__("USE POWER", position, dimensions)
 
+class EndTurnButton(Button):
+    def __init__(self):
+        position = (int(0.7 * HEIGHT), int(0.85 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("END TURN", position, dimensions)
+
+class ResetSelectionButton(Button):
+    def __init__(self):
+        position = (int(0.7 * HEIGHT), int(0.85 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("RESET SELECTION", position, dimensions)
+
+
+class ConfirmButton(Button):
+    def __init__(self):
+        position = (int(0.7 * HEIGHT), int(0.90 * HEIGHT))
+        dimensions = (int(0.2 * HEIGHT), int(HEIGHT / 25))
+
+        super().__init__("CONFIRM", position, dimensions)
+
+
 
 MOVE_BUTTON = MoveButton()
 POWER_BUTTON = UsePowerButton()
+END_TURN_BUTTON = EndTurnButton()
+CONFIRM_BUTTON = ConfirmButton()
+RESET_SELECTION_BUTTON = ResetSelectionButton()
 
 
 def highlight_buttons(active_buttons, screen, mouse):
@@ -103,19 +129,47 @@ def show_piece_buttons(screen, active_buttons):
     active_buttons.append(POWER_BUTTON)
 
 
+def show_end_turn_button(screen, active_buttons):
+    END_TURN_BUTTON.draw(screen)
+    active_buttons.append(END_TURN_BUTTON)
+
+def show_power_button(screen, active_buttons):
+    POWER_BUTTON.draw(screen)
+    active_buttons.append(POWER_BUTTON)
+
+def show_confirm_button(screen, active_buttons):
+    CONFIRM_BUTTON.draw(screen)
+    active_buttons.append(CONFIRM_BUTTON)
+
+def show_reset_selection_button(screen, active_buttons):
+    RESET_SELECTION_BUTTON.draw(screen)
+    active_buttons.append(RESET_SELECTION_BUTTON)
+
+
 def hide_piece_buttons(screen, active_buttons):
+    hide_button(MOVE_BUTTON, screen, active_buttons)
+    hide_button(POWER_BUTTON, screen, active_buttons)
+    hide_button(END_TURN_BUTTON, screen, active_buttons)
+    hide_button(RESET_SELECTION_BUTTON, screen, active_buttons)
+    hide_button(CONFIRM_BUTTON, screen, active_buttons)
+
+
+def hide_move_button(screen, active_buttons):
+    hide_button(MOVE_BUTTON, screen, active_buttons)
+
+def hide_power_button(screen, active_buttons):
+    hide_button(POWER_BUTTON, screen, active_buttons)
+
+
+def hide_button(button, screen, active_buttons):
     try:
-        active_buttons.remove(MOVE_BUTTON)
+        active_buttons.remove(button)
     except ValueError:
         pass
 
-    try:
-        active_buttons.remove(POWER_BUTTON)
-    except ValueError:
-        pass
+    button.erase_button(screen)
 
-    MOVE_BUTTON.erase_button(screen)
-    POWER_BUTTON.erase_button(screen)
+
 
 
 

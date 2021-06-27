@@ -51,9 +51,21 @@ piece_2.set_location((6, 6), board)
 piece_3 = Builder(3, player_3)
 piece_3.set_location((3, 5), board)
 
+piece_4 = Union(4, player_1)
+piece_4.set_location((2, 5), board)
+
+active_pieces = [piece, piece_2, piece_3, piece_4]
+passive_pieces = []
+target_fields = []
+confirmed = False
+
 running = True
 piece_selected = False
 selected_piece = None
+
+make_move = False
+use_power = False
+has_moved = False
 
 while running:
     for event in pygame.event.get():
@@ -64,39 +76,100 @@ while running:
             mouse = pygame.mouse.get_pos()
             field = board.get_mouse_field(mouse)
             button = get_mouse_button(active_buttons, mouse)
+
+
+
             if field:
-                if field.piece and not piece_selected:
+
+                if use_power:
+                    if field.piece and selected_piece:
+                        if selected_piece.selection_nr == 2:
+                            selected_piece.select_piece_1(field.piece, board)
+                        elif selected_piece.selection_nr == 1:
+                            selected_piece.select_piece_2(field.piece, board)
+                            hide_move_button(screen, active_buttons)
+                            hide_power_button(screen, active_buttons)
+                            show_confirm_button(screen, active_buttons)
+                            show_reset_selection_button(screen, active_buttons)
+
+                    continue
+
+
+                if field.piece and field.piece.active and not piece_selected:
                     piece_selected = True
                     selected_piece = field.piece
                     show_piece_buttons(screen, active_buttons)
 
                 elif piece_selected and not field.piece:
-                    if field in selected_piece.get_movement_options(board):
+                    if field in selected_piece.get_movement_options(board) and make_move:
                         selected_piece.move(field, board)
+                        hide_move_button(screen, active_buttons)
+                        show_end_turn_button(screen, active_buttons)
+                        has_moved = True
 
-                    piece_selected = False
-                    selected_piece = None
-                    hide_piece_buttons(screen, active_buttons)
+                    else:
+
+                        piece_selected = False
+                        selected_piece = None
+                        make_move = False
+                        hide_piece_buttons(screen, active_buttons)
+
+                    board.highlight_field(mouse)
 
                 else:
                     piece_selected = False
                     selected_piece = None
                     hide_piece_buttons(screen, active_buttons)
+                    make_move = False
+                    has_moved = False
 
             elif button:
                 if piece_selected and button.text == "MOVE":
                     board.highlight_move_options(selected_piece)
+                    make_move = True
+
                 elif piece_selected and button.text == "USE POWER":
-                    pass
-                hide_piece_buttons(screen, active_buttons)
+                    selection_nr = selected_piece.selection_nr
+                    if selected_piece.selection_nr > 0:
+                        selected_piece.set_target_fields(active_pieces, passive_pieces)
+                        board.highlight_fields(selected_piece.player, selected_piece.target_fields)
+                        use_power = True
+
+                elif piece_selected and button.text == "END TURN":
+                    piece_selected = False
+                    selected_piece = None
+                    make_move = False
+                    use_power = False
+                    hide_piece_buttons(screen, active_buttons)
+
+                elif button.text == "CONFIRM":
+                    confirmed = True
+
+                elif piece_selected and button.text == "RESET SELECTION":
+                    selected_piece.reset_selection()
+                    board.highlight_field(mouse)
+
+                    if not has_moved:
+                        show_piece_buttons(screen, active_buttons)
+                    else:
+                        show_power_button(screen, active_buttons)
+                        show_end_turn_button(screen, active_buttons)
 
             else:
                 piece_selected = False
                 selected_piece = None
+                make_move = False
+                use_power = False
                 hide_piece_buttons(screen, active_buttons)
 
-
-
+    if confirmed:
+        selected_piece.use_power(active_pieces, passive_pieces)
+        board.draw_piece(selected_piece)
+        hide_piece_buttons(screen, active_buttons)
+        use_power = False
+        piece_selected = False
+        selected_piece = None
+        confirmed = False
 
     mouse = pygame.mouse.get_pos()
     if not piece_selected:
