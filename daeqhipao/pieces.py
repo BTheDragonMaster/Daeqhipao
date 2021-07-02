@@ -37,7 +37,7 @@ class Pieces:
         for piece in self.pieces:
             if piece.player == player:
                 if not piece.oblivion:
-                    piece.wake(self.active_pieces, self.passive_pieces)
+                    piece.wake(self)
                 else:
                     piece.countdown_oblivion()
         self.set_active_and_passive_pieces()
@@ -153,20 +153,20 @@ class Piece:
 
         self.location = None
 
-    def sleep(self, active_pieces, passive_pieces):
+    def sleep(self, pieces):
         if not self.legacy_frequency:
             self.active = False
-            active_pieces.remove(self)
-            passive_pieces.append(self)
+            pieces.active_pieces.remove(self)
+            pieces.passive_pieces.append(self)
             
-    def wake(self, active_pieces, passive_pieces):
+    def wake(self, pieces):
         self.active = True
         for field in self.drought_fields:
             field.deactivate_drought(self)
         for field in self.ocean_fields:
             field.deactivate_ocean(self)
-        active_pieces.append(self)
-        passive_pieces.remove(self)
+        pieces.active_pieces.append(self)
+        pieces.passive_pieces.remove(self)
 
     def set_perception(self, user):
         if user.legacy_duration:

@@ -216,6 +216,10 @@ class Power:
             targets = self.get_target_fields_1(board)
         elif self.name == 'Drought':
             targets = self.get_target_fields_1(board)
+        elif self.name == 'Life':
+            targets = self.get_target_fields_1(pieces)
+        elif self.name == 'Death':
+            targets = self.get_target_fields_1(pieces)
 
 
         return targets
@@ -235,9 +239,13 @@ class Power:
             self.use_power(board)
         elif self.name == 'Drought':
             self.use_power(board)
+        elif self.name == "Life":
+            self.use_power(pieces)
+        elif self.name == "Death":
+            self.use_power(pieces)
 
         self.reset_targets()
-        self.piece.sleep(pieces.active_pieces, pieces.passive_pieces)
+        self.piece.sleep(pieces)
 
 
 class UnionPower(Power):
@@ -346,6 +354,20 @@ class LifePower(Power):
         self.confirm_message = "Bring this piece back to life?"
         self.highlight_types = ["highlight all targets"]
 
+    def get_target_fields_1(self, pieces):
+
+        targets = []
+
+        for piece in pieces.pieces:
+            if piece != self.piece and not piece.immune('Life') and not piece.active:
+                targets.append(piece.location)
+
+        return targets
+
+    def use_power(self, pieces):
+        self.selected_piece_1.wake(pieces)
+
+
 class PerceptionPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -410,6 +432,19 @@ class DeathPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Kill this piece?"
         self.highlight_types = ["highlight all targets"]
+
+    def get_target_fields_1(self, pieces):
+
+        targets = []
+
+        for piece in pieces.pieces:
+            if piece != self.piece and not piece.immune('Death') and piece.active:
+                targets.append(piece.location)
+
+        return targets
+
+    def use_power(self, pieces):
+        self.selected_piece_1.sleep(pieces)
 
 class BlindnessPower(Power):
     def __init__(self, piece):
