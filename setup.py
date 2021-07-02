@@ -12,7 +12,7 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    package_data={"": ["*.png"]},
+    package_data={"": ["*.png", "*.svg"]},
     install_requires=[],
     scripts=["bin/daeqhipao"],
 )

@@ -4,10 +4,10 @@ class PlayerProperties:
                             3: (153, 204, 255),
                             4: (204, 153, 255)}
 
-    player_to_colour_rgb_strong = {1: (200, 204, 204),
-                                   2: (200, 204, 102),
-                                   3: (153, 204, 200),
-                                   4: (204, 153, 200)}
+    player_to_colour_rgb_strong = {1: (249, 133, 133),
+                                   2: (255, 207, 108),
+                                   3: (108, 128, 255),
+                                   4: (187, 118, 255)}
     player_to_colour = {1: 'red',
                         2: 'orange',
                         3: 'blue',

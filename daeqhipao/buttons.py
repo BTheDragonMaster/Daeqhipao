@@ -65,6 +65,11 @@ class PowerButton(Button):
         self.power = power
         super().__init__(power.name, position, dimensions)
 
+class ChoiceButton(Button):
+    def __init__(self, text, position, dimensions):
+        super().__init__(text, position, dimensions)
+
+
 class UsePowerButton(Button):
     def __init__(self):
         position = (int(0.7 * HEIGHT), int(0.90 * HEIGHT))
@@ -192,11 +197,21 @@ def hide_piece_buttons(screen, active_buttons):
     hide_button(PLACE_BARRIER_BUTTON, screen, active_buttons)
     hide_button(REMOVE_BARRIER_BUTTON, screen, active_buttons)
     hide_power_buttons(screen, active_buttons)
+    hide_choice_buttons(screen, active_buttons)
 
 def hide_power_buttons(screen, active_buttons):
     buttons_to_remove = []
     for i, button in enumerate(active_buttons[:]):
         if type(button) == PowerButton:
+            buttons_to_remove.append(button)
+
+    for button in buttons_to_remove:
+        hide_button(button, screen, active_buttons)
+
+def hide_choice_buttons(screen, active_buttons):
+    buttons_to_remove = []
+    for i, button in enumerate(active_buttons[:]):
+        if type(button) == ChoiceButton:
             buttons_to_remove.append(button)
 
     for button in buttons_to_remove:

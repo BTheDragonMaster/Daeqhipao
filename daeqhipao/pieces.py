@@ -37,7 +37,7 @@ class Pieces:
         for piece in self.pieces:
             if piece.player == player:
                 if not piece.oblivion:
-                    piece.active = True
+                    piece.wake(self.active_pieces, self.passive_pieces)
                 else:
                     piece.countdown_oblivion()
         self.set_active_and_passive_pieces()
@@ -65,6 +65,10 @@ class Piece:
         self.oblivion = 0
         self.liberation = 0
 
+        self.ocean_fields = []
+        self.drought_fields = []
+        self.flame_fields = []
+
         self.symbol_image = None
 
         self.piece_rectangle = None
@@ -75,8 +79,11 @@ class Piece:
 
 
     def __eq__(self, piece):
-        if self.id == piece.id:
-            return True
+        if type(self) == type(piece):
+            if self.id == piece.id:
+                return True
+            else:
+                return False
         else:
             return False
 
@@ -154,6 +161,10 @@ class Piece:
             
     def wake(self, active_pieces, passive_pieces):
         self.active = True
+        for field in self.drought_fields:
+            field.deactivate_drought(self)
+        for field in self.ocean_fields:
+            field.deactivate_ocean(self)
         active_pieces.append(self)
         passive_pieces.remove(self)
 
@@ -234,7 +245,7 @@ class Piece:
             return True
         
         elif self.type == 'God':
-            if power in self.powers:
+            if power in [p.name for p in self.powers]:
                 return True
             else:
                 return False
@@ -273,6 +284,7 @@ class Piece:
             raise IllegalMove('temple')
 
     def move(self, target_location, board):
+        print(self.name)
         original_x = self.location.x
         original_y = self.location.y
 

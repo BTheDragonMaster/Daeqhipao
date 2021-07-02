@@ -37,7 +37,9 @@ class Board:
             self.board.append(row)
 
         self.assign_field_types()
+        self.set_all_fields()
         self.set_rectangles()
+
 
     def draw_frame(self):
         self.draw_board_line((5, 0), (6, 0))
@@ -103,7 +105,6 @@ class Board:
 
         self.draw_frame()
 
-
     def highlight_move_options(self, piece):
         legal_fields = piece.get_movement_options(self)
         for legal_field in legal_fields:
@@ -113,6 +114,7 @@ class Board:
 
     def redraw_field(self, field, colour):
         field.redraw(self.screen, colour)
+        field.draw_conditions(self.screen)
         if field.piece:
             self.draw_piece(field.piece)
 
@@ -138,21 +140,27 @@ class Board:
         field.highlight_strong(self.screen, player, self)
         self.draw_frame()
 
-    def highlight_field(self, mouse):
+    def set_all_fields(self):
+        self.fields = []
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
                 field = self.get_field(i, j)
                 if not field.type == 'no field':
-                    if field.rectangle.collidepoint(mouse):
-                        hovered = True
-                    else:
-                        hovered = False
-                    field.draw(self.screen, hovered)
-                    self.draw_frame()
-                    if field.piece:
-                        self.draw_piece(field.piece)
-                    elif field.barrier:
-                        self.draw_barrier(field.barrier)
+                    self.fields.append(field)
+
+    def highlight_field(self, mouse):
+        for field in self.fields:
+            if field.rectangle.collidepoint(mouse):
+                hovered = True
+            else:
+                hovered = False
+            field.draw(self.screen, hovered)
+            field.draw_conditions(self.screen)
+            self.draw_frame()
+            if field.piece:
+                self.draw_piece(field.piece)
+            elif field.barrier:
+                self.draw_barrier(field.barrier)
 
     def calc_piece_offset(self, field):
         x_offset = (1 + field.x) * SQUARE_WIDTH + PIECE_PADDING
@@ -170,15 +178,10 @@ class Board:
 
         piece_type = piece.type.lower()
 
-        if piece.gender == 'F':
-            gender = 'female'
-        else:
-            gender = 'male'
-
         if not piece.active:
             piece_body_dir = os.path.join(PIECE_IMAGE_DIR, f'{piece.player.colour}_passive.png')
         else:
-            piece_body_dir = os.path.join(PIECE_IMAGE_DIR, f'{piece.player.colour}_{gender}_{piece_type}.png')
+            piece_body_dir = os.path.join(PIECE_IMAGE_DIR, f'{piece.player.colour}_{piece.gender}_{piece_type}.png')
 
         piece_image = pygame.image.load(piece_body_dir)
         piece_image_scaled = pygame.transform.smoothscale(piece_image, (PIECE_SIZE, PIECE_SIZE))
@@ -229,10 +232,8 @@ class Board:
             self.board[x][y].type = "temple square"
 
     def set_rectangles(self):
-        for i, row in enumerate(self.board):
-            for j, column in enumerate(row):
-                self.board[i][j].set_rectangle(SQUARE_WIDTH)
-
+        for field in self.fields:
+            field.set_rectangle(SQUARE_WIDTH)
 
     def print_board_type(self):
         string = ''
@@ -258,26 +259,58 @@ class Board:
         source_location = self.get_field(source_x, source_y)
         target_location = self.get_field(target_x, target_y)
 
+        x_diff_1 = target_location.x - object_1.location.x
+        y_diff_1 = target_location.y - object_1.location.y
+
+        x_diff_2 = -x_diff_1
+        y_diff_2 = -y_diff_1
+
         if type(object_1) == Barrier:
             source_location.barrier = None
-            target_location.barrier = object_1
 
         elif issubclass(type(object_1), Piece):
             source_location.piece = None
+
+        if type(object_2) == Barrier:
+            target_location.barrier = None
+
+        elif issubclass(type(object_2), Piece):
+            target_location.piece = None
+
+        if type(object_1) == Barrier:
+            target_location.barrier = object_1
+
+        elif issubclass(type(object_1), Piece):
             target_location.piece = object_1
 
         if type(object_2) == Barrier:
-            if not type(object_1) == Barrier:
-                target_location.barrier = None
             source_location.barrier = object_2
 
         elif issubclass(type(object_2), Piece):
-            if not issubclass(type(object_1), Piece):
-                target_location.piece = None
             source_location.piece = object_2
+
+        if issubclass(type(object_1), Piece):
+            object_1.piece_rectangle = object_1.piece_rectangle.move(x_diff_1 * SQUARE_WIDTH, y_diff_1 * SQUARE_WIDTH)
+            object_1.symbol_rectangle = object_1.symbol_rectangle.move(x_diff_1 * SQUARE_WIDTH, y_diff_1 * SQUARE_WIDTH)
+            self.draw_piece(object_1)
+        elif type(object_1) == Barrier:
+            object_1.rectangle = object_1.rectangle.move(x_diff_1 * SQUARE_WIDTH, y_diff_1 * SQUARE_WIDTH)
+            self.draw_barrier(object_1)
+
+        if issubclass(type(object_2), Piece):
+            object_2.piece_rectangle = object_2.piece_rectangle.move(x_diff_2 * SQUARE_WIDTH, y_diff_2 * SQUARE_WIDTH)
+            object_2.symbol_rectangle = object_2.symbol_rectangle.move(x_diff_2 * SQUARE_WIDTH, y_diff_2 * SQUARE_WIDTH)
+            self.draw_piece(object_2)
+        elif type(object_2) == Barrier:
+            object_2.rectangle = object_2.rectangle.move(x_diff_2 * SQUARE_WIDTH, y_diff_2 * SQUARE_WIDTH)
+            self.draw_barrier(object_2)
 
         object_1.location = target_location
         object_2.location = source_location
+
+        print(source_location.piece)
+        print(target_location.piece)
+
 
 
 

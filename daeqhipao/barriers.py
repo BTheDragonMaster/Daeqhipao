@@ -12,7 +12,13 @@ class Barrier:
         return f'Barrier {self.id}'
 
     def __eq__(self, barrier):
-        return self.id == barrier.id
+        if type(self) == type(barrier):
+            if self.id == barrier.id:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def __hash__(self):
         return self.id

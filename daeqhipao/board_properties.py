@@ -20,7 +20,7 @@ class BoardProperties:
                         (9, 6),
                         (9, 7)]
 
-    temple_squares = [(0, 5), (0, 10), (5, 0), (5, 10)]
+    temple_squares = [(0, 5), (10, 5), (5, 0), (5, 10)]
 
     temple_area_squares = [(3, 8),
                            (4, 8),
