@@ -978,7 +978,7 @@ class Metamorphosis(MaleHeir):
 
 class Quake(MaleHeir):
     def __init__(self, nr, player):
-        MaleHeir.__init__(self, nr, location, player)
+        MaleHeir.__init__(self, nr, player)
         self.name = "Quake"
         self.symbol = 'C'
         self.load_symbol_image()

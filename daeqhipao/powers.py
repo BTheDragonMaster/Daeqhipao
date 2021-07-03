@@ -103,7 +103,6 @@ class Power:
                     elif field.barrier:
                         board.draw_barrier(field.barrier)
 
-
         else:
             for field in target_fields:
 
@@ -111,8 +110,6 @@ class Power:
                     hovered = True
                 else:
                     hovered = False
-
-
 
                 field.draw(screen, hovered, self.piece.player.colour_rgb)
                 if field.piece == self.piece:
@@ -141,27 +138,27 @@ class Power:
         self.targets_2 = []
         self.choice = None
 
-    def select_piece_1(self, piece, board):
+    def select_piece_1(self, piece):
         self.selected_piece_1 = piece
         self.target_nr -= 1
 
-    def select_piece_2(self, piece, board):
+    def select_piece_2(self, piece):
         self.selected_piece_2 = piece
         self.target_nr -= 1
 
-    def select_field_1(self, field, board):
+    def select_field_1(self, field):
         self.selected_field_1 = field
         self.target_nr -= 1
 
-    def select_field_2(self, field, board):
+    def select_field_2(self, field):
         self.selected_field_2 = field
         self.target_nr -= 1
 
-    def select_barrier_1(self, barrier, board):
+    def select_barrier_1(self, barrier):
         self.selected_barrier_1 = barrier
         self.target_nr -= 1
 
-    def select_barrier_2(self, barrier, board):
+    def select_barrier_2(self, barrier):
         self.selected_barrier_2 = barrier
         self.target_nr -= 1
 
@@ -213,10 +210,8 @@ class Power:
 
         if self.name == 'Union':
             if self.target_nr == 2:
-                print('first selection')
                 targets = self.get_target_fields_1(pieces)
             elif self.target_nr == 1:
-                print('second selection')
                 targets = self.get_target_fields_2(pieces)
         elif self.name == 'Impression':
             if self.target_nr == 1:
@@ -241,12 +236,26 @@ class Power:
             targets = self.get_target_fields_1(pieces)
         elif self.name == 'Sun':
             targets = self.get_target_fields_1(board)
+        elif self.name == 'Wind':
+            targets = self.get_target_fields_1(board)
         elif self.name == 'Sky':
             targets = self.get_target_fields_1(board)
         elif self.name == 'Idea':
             targets = self.get_target_fields_1(players, pieces)
         elif self.name == 'Illusion':
             targets = self.get_target_fields_1(players, pieces)
+        elif self.name == 'Quake':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(board)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(board)
+
+        elif self.name == 'Wave':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(board, pieces)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(board)
+
 
 
         return targets
@@ -272,12 +281,18 @@ class Power:
             self.use_power(pieces)
         elif self.name == 'Sun':
             self.use_power(board)
+        elif self.name == 'Wind':
+            self.use_power(board)
         elif self.name == 'Sky':
             self.use_power(board)
         elif self.name == 'Idea':
             self.use_power()
         elif self.name == 'Illusion':
             self.use_power()
+        elif self.name == 'Quake':
+            self.use_power(board)
+        elif self.name == 'Wave':
+            self.use_power(board)
 
         self.reset_targets()
         self.piece.deactivate_idea()
@@ -709,6 +724,27 @@ class QuakePower(Power):
         self.confirm_message = "Move barrier here?"
         self.highlight_types = ["highlight all targets", "hover"]
 
+    def use_power(self, board):
+        self.selected_barrier_1.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board):
+        target_fields = []
+
+        for field in board.fields:
+            if field.barrier:
+                target_fields.append(field)
+
+        return target_fields
+
+    def get_target_fields_2(self, board):
+        target_fields = []
+
+        for field in board.fields:
+            if not field.occupied and not field.type == 'temple square':
+                target_fields.append(field)
+
+        return target_fields
+
 
 class WavePower(Power):
     def __init__(self, piece):
@@ -718,6 +754,35 @@ class WavePower(Power):
         self.confirm_message = "Move piece here?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
 
+    def use_power(self, board):
+        self.selected_piece_1.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board, pieces):
+        target_fields = []
+        for piece in pieces.pieces:
+            if not piece.immune('Wave'):
+                adjacent_fields = piece.location.get_adjacent(board, type='all')
+                possible_movement = False
+                for adjacent_field in adjacent_fields:
+                    if adjacent_field.check_legal_movement(piece):
+                        possible_movement = True
+                        break
+                if possible_movement:
+                    target_fields.append(piece.location)
+
+        return target_fields
+
+    def get_target_fields_2(self, board):
+        target_fields = []
+
+        adjacent_fields = self.selected_piece_1.location.get_adjacent(board, type='all')
+
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.check_legal_movement(self.selected_piece_1):
+                target_fields.append(adjacent_field)
+
+        return target_fields
+
 
 class WindPower(Power):
     def __init__(self, piece):
@@ -726,6 +791,43 @@ class WindPower(Power):
         self.set_target_types(['field'])
         self.confirm_message = "Move here?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self, board):
+        self.piece.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board):
+
+        target_1 = board.get_field(self.piece.location.x + 2, self.piece.location.y + 2)
+        target_2 = board.get_field(self.piece.location.x - 2, self.piece.location.y + 2)
+        target_3 = board.get_field(self.piece.location.x + 2, self.piece.location.y - 2)
+        target_4 = board.get_field(self.piece.location.x - 2, self.piece.location.y - 2)
+
+        pass_1 = board.get_field(self.piece.location.x + 1, self.piece.location.y + 1)
+        pass_2 = board.get_field(self.piece.location.x - 1, self.piece.location.y + 1)
+        pass_3 = board.get_field(self.piece.location.x + 1, self.piece.location.y - 1)
+        pass_4 = board.get_field(self.piece.location.x - 1, self.piece.location.y - 1)
+
+        target_fields = []
+        if self.check_target(target_1, pass_1):
+            target_fields.append(target_1)
+        if self.check_target(target_2, pass_2):
+            target_fields.append(target_2)
+        if self.check_target(target_3, pass_3):
+            target_fields.append(target_3)
+        if self.check_target(target_4, pass_4):
+            target_fields.append(target_4)
+
+        return target_fields
+
+    def check_target(self, target_field, pass_through_field):
+        if not target_field:
+            return False
+        if not pass_through_field:
+            return False
+        if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
+            return True
+        else:
+            return False
 
 
 class ShadowPower(Power):

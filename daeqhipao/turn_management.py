@@ -70,22 +70,22 @@ class TurnManager:
 
         if target_type == 'field':
             if self.power.selected_field_1:
-                self.power.select_field_2(target, self.board)
+                self.power.select_field_2(target)
             else:
-                self.power.select_field_1(target, self.board)
+                self.power.select_field_1(target)
 
         elif target_type == 'piece':
 
             if self.power.selected_piece_1:
-                self.power.select_piece_2(target.piece, self.board)
+                self.power.select_piece_2(target.piece)
             else:
-                self.power.select_piece_1(target.piece, self.board)
+                self.power.select_piece_1(target.piece)
 
         elif target_type == 'barrier':
             if self.power.selected_barrier_1:
-                self.power.select_barrier_2(target.barrier, self.board)
+                self.power.select_barrier_2(target.barrier)
             else:
-                self.power.select_barrier_1(target.barrier, self.board)
+                self.power.select_barrier_1(target.barrier)
 
     def zaopeng(self):
 

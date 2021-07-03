@@ -44,16 +44,16 @@ player_3.set_field_ownership(board)
 piece_1 = Builder(1, player_1)
 piece_1.set_location((5, 9), board)
 
-piece_2 = Union(2, player_1)
+piece_2 = Quake(2, player_1)
 piece_2.set_location((3, 9), board)
 
-piece_3 = Idea(3, player_1)
+piece_3 = Wave(3, player_1)
 piece_3.set_location((4, 9), board)
 
 piece_4 = Death(4, player_1)
 piece_4.set_location((6, 9), board)
 
-piece_5 = Illusion(5, player_1)
+piece_5 = Wind(5, player_1)
 piece_5.set_location((7, 9), board)
 
 piece_6 = Builder(6, player_3)
