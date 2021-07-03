@@ -32,7 +32,7 @@ class Power:
         self.target_nr = len(selection_types)
         self.target_types = selection_types
 
-    def highlight_all_targets(self, turn_manager, mouse):
+    def highlight_all_targets(self, turn_manager):
 
         highlight_type = self.get_highlight_type()
         if highlight_type == 'highlight all targets':
@@ -40,6 +40,23 @@ class Power:
         elif highlight_type == 'hover':
             turn_manager.hover = True
 
+    def highlight_selected_fields(self, screen, board):
+        fields_to_highlight = []
+        if self.selected_field_1:
+            fields_to_highlight.append(self.selected_field_1)
+        if self.selected_field_2:
+            fields_to_highlight.append(self.selected_field_2)
+        if self.selected_piece_1:
+            fields_to_highlight.append(self.selected_piece_1.location)
+        if self.selected_piece_2:
+            fields_to_highlight.append(self.selected_piece_2.location)
+        if self.selected_barrier_1:
+            fields_to_highlight.append(self.selected_barrier_1.location)
+        if self.selected_barrier_2:
+            fields_to_highlight.append(self.selected_barrier_2.location)
+
+        for field in fields_to_highlight:
+            field.highlight_strong(screen, self.piece.player, board)
 
     def highlight_hover(self, screen, board, target_fields, mouse):
         if self.name == 'Ocean' or self.name == 'Drought':
@@ -196,12 +213,14 @@ class Power:
 
         if self.name == 'Union':
             if self.target_nr == 2:
-                targets = self.get_target_fields_1(pieces.active_pieces, pieces.passive_pieces)
+                print('first selection')
+                targets = self.get_target_fields_1(pieces)
             elif self.target_nr == 1:
-                targets = self.get_target_fields_2(pieces.active_pieces, pieces.passive_pieces)
+                print('second selection')
+                targets = self.get_target_fields_2(pieces)
         elif self.name == 'Impression':
             if self.target_nr == 1:
-                targets = self.get_target_fields_1(pieces.pieces)
+                targets = self.get_target_fields_1(pieces)
         elif self.name == 'Earth':
             if self.target_nr == 2:
                 targets = self.get_target_fields_1(board)
@@ -225,6 +244,8 @@ class Power:
         elif self.name == 'Sky':
             targets = self.get_target_fields_1(board)
         elif self.name == 'Idea':
+            targets = self.get_target_fields_1(players, pieces)
+        elif self.name == 'Illusion':
             targets = self.get_target_fields_1(players, pieces)
 
 
@@ -255,6 +276,8 @@ class Power:
             self.use_power(board)
         elif self.name == 'Idea':
             self.use_power()
+        elif self.name == 'Illusion':
+            self.use_power()
 
         self.reset_targets()
         self.piece.deactivate_idea()
@@ -279,18 +302,21 @@ class UnionPower(Power):
         self.selected_piece_1.activate_union(self.selected_piece_2)
         self.selected_piece_2.activate_union(self.selected_piece_1)
 
-    def get_target_fields_1(self, active_pieces, passive_pieces):
+    def get_target_fields_1(self, pieces):
 
         true_active_targets = []
         true_passive_targets = []
 
+        print(pieces.active_pieces)
+        print(pieces.passive_pieces)
+
         targets = []
 
-        for piece in active_pieces:
+        for piece in pieces.active_pieces:
             if piece != self.piece and not piece.immune('Union'):
                 true_active_targets.append(piece.location)
 
-        for piece in passive_pieces:
+        for piece in pieces.passive_pieces:
             if piece != self.piece and not piece.immune('Union'):
                 true_passive_targets.append(piece.location)
 
@@ -302,17 +328,17 @@ class UnionPower(Power):
 
         return targets
 
-    def get_target_fields_2(self, active_pieces, passive_pieces):
+    def get_target_fields_2(self, pieces):
 
         targets = []
 
         if self.selected_piece_1.active:
-            for piece in active_pieces:
+            for piece in pieces.active_pieces:
                 if piece != self.selected_piece_1 and piece != self.piece and not piece.immune("Union"):
                     targets.append(piece.location)
 
         else:
-            for piece in passive_pieces:
+            for piece in pieces.passive_pieces:
                 if piece != self.selected_piece_1 and piece != self.piece and not piece.immune("Union"):
                     targets.append(piece.location)
 
@@ -337,7 +363,7 @@ class ImpressionPower(Power):
 
         targets = []
 
-        for piece in pieces:
+        for piece in pieces.pieces:
             if piece != self.piece and not piece.immune('Impression') and not piece.location.in_temple_area():
                 targets.append(piece.location)
 
@@ -424,6 +450,32 @@ class IllusionPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Force this piece to move next turn?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self):
+        self.selected_piece_1.activate_illusion()
+
+    def get_target_fields_1(self, players, pieces):
+        idea_players = []
+        legal_players = []
+
+        for player in players:
+            if player != self.piece.player and not player.illusion:
+                if player.idea:
+                    idea_players.append(player)
+                else:
+                    legal_players.append(player)
+
+        target_fields = []
+
+        for piece in pieces.pieces:
+            if piece.active and not piece.immune('Illusion'):
+                if piece.player in legal_players:
+                    target_fields.append(piece.location)
+                elif piece.player in idea_players:
+                    if piece.idea:
+                        target_fields.append(piece.location)
+
+        return target_fields
 
 class IdeaPower(Power):
     def __init__(self, piece):
@@ -744,8 +796,10 @@ class VoidPower(Power):
         target_fields = []
 
         for field in board.fields:
-            if field.barrier and not field == self.selected_field_1:
+            if field.barrier and not field.barrier == self.selected_barrier_1:
                 target_fields.append(field)
+
+        print(target_fields)
 
         return target_fields
 

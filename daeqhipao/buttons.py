@@ -163,6 +163,9 @@ def show_piece_buttons(screen, active_buttons):
     active_buttons.append(MOVE_BUTTON)
     active_buttons.append(POWER_BUTTON)
 
+def show_move_button(screen, active_buttons):
+    MOVE_BUTTON.draw(screen)
+    active_buttons.append(MOVE_BUTTON)
 
 def show_end_turn_button(screen, active_buttons):
     END_TURN_BUTTON.draw(screen)

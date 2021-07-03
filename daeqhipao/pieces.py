@@ -19,6 +19,8 @@ class Pieces:
         self.set_active_and_passive_pieces()
 
     def set_active_and_passive_pieces(self):
+        self.active_pieces = []
+        self.passive_pieces = []
         for piece in self.pieces:
             if piece.active:
                 self.active_pieces.append(piece)
@@ -92,6 +94,9 @@ class Piece:
 
     def __hash__(self):
         return self.id
+
+    def __repr__(self):
+        return self.name
 
     def get_movement_options(self, board):
         legal_fields = self.location.get_legal_adjacent(board, self)
@@ -221,11 +226,12 @@ class Piece:
         assert self.communication >= 0
 
     def activate_illusion(self):
-        self.player.illusion.append(self)
+        self.illusion = True
+        self.player.illusion = True
         
     def deactivate_illusion(self):
-        assert self in self.player.illusion
-        self.player.illusion.remove(self)
+        self.illusion = False
+        self.player.illusion = False
 
     def activate_idea(self):
         self.idea = True

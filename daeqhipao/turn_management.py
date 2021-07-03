@@ -147,7 +147,7 @@ class TurnManager:
 
         for piece in self.pieces.pieces:
             if piece.active and piece.player == self.current_player:
-                if piece.idea:
+                if piece.idea or piece.illusion:
                     self.selectable_fields = [piece.location]
                     break
                 else:
@@ -156,7 +156,10 @@ class TurnManager:
     def select_piece(self, piece):
         self.current_piece = piece
         self.movement_options = self.current_piece.get_movement_options(self.board)
-        show_piece_buttons(self.screen, self.active_buttons)
+        if self.current_piece.illusion:
+            show_move_button(self.screen, self.active_buttons)
+        else:
+            show_piece_buttons(self.screen, self.active_buttons)
         self.new_state('select move or use power')
 
     def show_movement_options(self):
@@ -178,10 +181,17 @@ class TurnManager:
 
                 relative_position += 0.05
 
-    def show_power_targets(self, mouse):
+    def show_power_targets(self):
+        print("showing targets..")
+
+        if self.current_target_fields:
+            for field in self.current_target_fields:
+                self.board.redraw_field(field, BACKGROUND_BOARD)
+
+        self.power.highlight_selected_fields(self.screen, self.board)
 
         self.current_target_fields = self.power.get_target_fields(self.pieces, self.barriers, self.board, self.players)
-        self.power.highlight_all_targets(self, mouse)
+        self.power.highlight_all_targets(self)
 
     def show_power_options(self):
         hide_piece_buttons(self.screen, self.active_buttons)
@@ -207,7 +217,10 @@ class TurnManager:
         hide_move_button(self.screen, self.active_buttons)
         if not self.current_piece.idea:
             show_end_turn_button(self.screen, self.active_buttons)
+        if self.current_piece.illusion:
+            show_power_button(self.screen, self.active_buttons)
         self.has_moved = True
+        self.current_piece.deactivate_illusion()
         self.new_state('select use power or end turn')
         self.board.redraw_field(target_square, colour=HIGHLIGHT_BOARD)
 
@@ -285,11 +298,16 @@ class TurnManager:
             self.new_state('select use power or end turn')
         else:
 
-            show_piece_buttons(self.screen, self.active_buttons)
+            if self.current_piece.illusion:
+                show_move_button(self.screen, self.active_buttons)
+            else:
+                show_piece_buttons(self.screen, self.active_buttons)
             self.new_state('select move or use power')
 
 
     def do_click_action(self, mouse):
+        print(self.pieces.active_pieces)
+        print(self.pieces.passive_pieces)
         state = self.get_current_state()
         selected_entity = self.detect_click_location(mouse)
         if selected_entity:
@@ -328,8 +346,10 @@ class TurnManager:
 
         elif state == 'select power target':
             if field in self.current_target_fields:
+                print("make selection")
                 self.select_target(field)
                 if self.power.target_nr > 0:
+                    self.show_power_targets()
                     self.new_state('select power target')
                 else:
 
@@ -370,7 +390,7 @@ class TurnManager:
         hide_piece_buttons(self.screen, self.active_buttons)
 
         if not self.power.start_with_choice:
-            self.show_power_targets(mouse)
+            self.show_power_targets()
             self.new_state('select power target')
         else:
             self.display_choices()
@@ -402,7 +422,7 @@ class TurnManager:
                 show_reset_selection_button(self.screen, self.active_buttons)
 
                 if not self.power.start_with_choice:
-                    self.show_power_targets(mouse)
+                    self.show_power_targets()
                     self.new_state('select power target')
                 elif self.power.fixed_affected_area:
                     self.current_target_fields = self.power.get_target_fields_1(self.board)
@@ -419,10 +439,12 @@ class TurnManager:
         elif type(button) == ChoiceButton:
 
             self.make_choice(button)
-            self.show_power_targets(mouse)
+            self.show_power_targets()
 
         elif button.text == "CONFIRM":
             self.power.activate_power(self.pieces, self.barriers, self.board)
+            self.current_target_fields = []
+
             if not self.zaopeng():
                 self.next_turn()
         elif button.text == "END TURN":
