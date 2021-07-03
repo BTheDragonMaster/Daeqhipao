@@ -266,9 +266,10 @@ class Power:
                 targets = self.get_target_fields_1(board)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)
-
-
-
+        elif self.name == 'Metalmaker':
+            targets = self.get_target_fields_1(board, barriers)
+        elif self.name == 'Night':
+            targets = self.get_target_fields_1(board)
 
         return targets
 
@@ -311,6 +312,12 @@ class Power:
             self.use_power(board)
         elif self.name == 'Bloodmaker':
             self.use_power(board)
+        elif self.name == 'Metalmaker':
+            self.use_power(board, barriers)
+        elif self.name == 'Flame':
+            self.use_power(board)
+        elif self.name == 'Night':
+            self.use_power(board, barriers)
 
         self.reset_targets()
         self.piece.deactivate_idea()
@@ -725,7 +732,11 @@ class SunPower(Power):
     def check_target(self, target_field, pass_through_field):
         if not target_field:
             return False
+        if target_field.type == 'no field':
+            return False
         if not pass_through_field:
+            return False
+        if pass_through_field.type == 'no field':
             return False
         if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
             return True
@@ -839,7 +850,11 @@ class WindPower(Power):
     def check_target(self, target_field, pass_through_field):
         if not target_field:
             return False
+        if target_field.type == 'no field':
+            return False
         if not pass_through_field:
+            return False
+        if pass_through_field.type == 'no field':
             return False
         if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
             return True
@@ -884,6 +899,25 @@ class MetalmakerPower(Power):
         self.set_target_types(['field'])
         self.confirm_message = "Move and leave barrier?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self, board, barriers):
+        field_of_origin = board.get_field(self.piece.location.x, self.piece.location.y)
+        self.piece.move(self.selected_field_1, board)
+        barrier = barriers.unused_barriers[0]
+        barrier.place_on_board(field_of_origin, board, barriers)
+
+    def get_target_fields_1(self, board, barriers):
+        targets = []
+
+        if barriers.unused_barriers:
+
+            adjacent_fields = self.piece.location.get_adjacent(board, type='all')
+            for field in adjacent_fields:
+                if field.check_legal_movement(self.piece):
+                    targets.append(field)
+
+        return targets
+
 
 
 class BloodmakerPower(Power):
@@ -983,8 +1017,6 @@ class FogPower(Power):
         return True
 
 
-
-
 class FlamePower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -993,6 +1025,45 @@ class FlamePower(Power):
         self.confirm_message = "Activate flame?"
         self.highlight_types = []
         self.fixed_affected_area = True
+
+    def use_power(self, board):
+        for field in self.get_affected_fields(board):
+            field.activate_flame(self.piece)
+
+    def get_target_fields_1(self, board):
+        target_fields = self.get_affected_fields(board)
+        return target_fields
+
+    def get_affected_fields(self, board):
+        affected_fields = [self.piece.location]
+        adjacent_fields = self.piece.location.get_adjacent(board, type='all')
+        for field in adjacent_fields:
+            if not (field.type == 'temple square' and field.owner):
+                affected_fields.append(field)
+
+        print(affected_fields)
+
+        field_1 = board.get_field(self.piece.location.x, self.piece.location.y + 2)
+        if field_1 and not field_1.type == 'temple square':
+            affected_fields.append(field_1)
+
+        field_2 = board.get_field(self.piece.location.x, self.piece.location.y - 2)
+        if field_2 and not field_2.type == 'temple square':
+            affected_fields.append(field_2)
+
+        field_3 = board.get_field(self.piece.location.x + 2, self.piece.location.y)
+        if field_3 and not field_3.type == 'temple square':
+            affected_fields.append(field_3)
+
+        field_4 = board.get_field(self.piece.location.x - 2, self.piece.location.y)
+        if field_4 and not field_4.type == 'temple square':
+            affected_fields.append(field_4)
+
+        print(affected_fields)
+
+        return affected_fields
+
+
 
 
 class VoidPower(Power):
@@ -1072,3 +1143,19 @@ class NightPower(Power):
         self.set_target_types(['barrier'])
         self.confirm_message = "Consume this barrier?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self, board, barriers):
+        target_location = board.get_field(self.selected_barrier_1.location.x, self.selected_barrier_1.location.y)
+        self.selected_barrier_1.remove_from_board(board, barriers)
+        self.piece.move(target_location, board)
+
+    def get_target_fields_1(self, board):
+        target_fields = []
+
+        adjacent_fields = self.piece.location.get_adjacent(board, type='all')
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.barrier and self.piece.location.permitted_area_condition(self.piece):
+                target_fields.append(adjacent_field)
+
+        return target_fields
+

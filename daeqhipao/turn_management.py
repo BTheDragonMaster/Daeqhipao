@@ -122,6 +122,9 @@ class TurnManager:
         hide_piece_buttons(self.screen, self.active_buttons)
 
         self.turn += 1
+        for field in self.board.fields:
+            if field.flame:
+                field.countdown_flame(self.current_player)
 
         self.current_player = self.players[self.turn % len(self.players)]
         self.current_piece = None
@@ -421,13 +424,15 @@ class TurnManager:
                 hide_piece_buttons(self.screen, self.active_buttons)
                 show_reset_selection_button(self.screen, self.active_buttons)
 
-                if not self.power.start_with_choice:
-                    self.show_power_targets()
-                    self.new_state('select power target')
-                elif self.power.fixed_affected_area:
+                if self.power.fixed_affected_area:
                     self.current_target_fields = self.power.get_target_fields_1(self.board)
                     self.board.highlight_fields_strong(self.current_player, self.current_target_fields)
                     self.ask_confirmation()
+
+                elif not self.power.start_with_choice:
+                    self.show_power_targets()
+                    self.new_state('select power target')
+
                 else:
                     self.display_choices()
                     self.new_state('make choice')

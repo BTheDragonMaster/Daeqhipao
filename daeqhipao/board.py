@@ -91,7 +91,7 @@ class Board:
 
         field = self.get_field(x, y)
 
-        if field and not field.type == 'no field':
+        if field:
             return field
 
         else:
@@ -145,7 +145,7 @@ class Board:
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
                 field = self.get_field(i, j)
-                if not field.type == 'no field':
+                if field:
                     self.fields.append(field)
 
     def highlight_field(self, mouse):
@@ -245,7 +245,11 @@ class Board:
 
     def get_field(self, x, y):
         try:
-            return self.board[x][y]
+            field = self.board[x][y]
+            if field.type != 'no field':
+                return field
+            else:
+                return None
         except IndexError:
             return None
 

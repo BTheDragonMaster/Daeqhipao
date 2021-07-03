@@ -39,6 +39,7 @@ class Field:
         self.drought = False
         self.flame = False
         self.flame_casters = set()
+        self.flame_counts = {}
         self.ocean_casters = set()
         self.drought_casters = set()
 
@@ -146,11 +147,22 @@ class Field:
 
     def activate_flame(self, piece):
         self.flame = True
-        self.flame_casters.add(piece.player())
+        self.flame_counts[piece.player] = 3
 
-    def deactivate_flame(self, piece):
-        self.flame = False
-        self.flame_casters.remove(piece.player())
+    def countdown_flame(self, player):
+        try:
+            self.flame_counts[player] -= 1
+            if self.flame_counts[player] == 0:
+                self.deactivate_flame(player)
+        except KeyError:
+            pass
+
+
+    def deactivate_flame(self, player):
+        del self.flame_counts[player]
+        if not self.flame_counts:
+            self.flame = False
+
 
     def check_occupied(self):
         if self.piece or self.barrier:
@@ -206,6 +218,8 @@ class Field:
             if field:
                 adjacent.append(field)
 
+        print(adjacent)
+
         return adjacent
 
     def check_legal_movement(self, piece):
@@ -222,7 +236,7 @@ class Field:
 
     def check_flame(self, piece):
         if self.flame:
-            if piece.player in self.flame_casters and len(self.flame_casters) == 1:
+            if piece.player in self.flame_counts and len(self.flame_counts) == 1:
                 return False
             if piece.immune("Flame"):
                 return False
