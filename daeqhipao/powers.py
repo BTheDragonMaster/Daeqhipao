@@ -220,6 +220,10 @@ class Power:
             targets = self.get_target_fields_1(pieces)
         elif self.name == 'Death':
             targets = self.get_target_fields_1(pieces)
+        elif self.name == 'Sun':
+            targets = self.get_target_fields_1(board)
+        elif self.name == 'Sky':
+            targets = self.get_target_fields_1(board)
 
 
         return targets
@@ -243,6 +247,10 @@ class Power:
             self.use_power(pieces)
         elif self.name == "Death":
             self.use_power(pieces)
+        elif self.name == 'Sun':
+            self.use_power(board)
+        elif self.name == 'Sky':
+            self.use_power(board)
 
         self.reset_targets()
         self.piece.sleep(pieces)
@@ -539,6 +547,29 @@ class SkyPower(Power):
         self.confirm_message = "Jump here?"
         self.highlight_types = ["highlight all targets"]
 
+    def use_power(self, board):
+        self.piece.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board):
+        adjacent_fields = self.piece.location.get_adjacent(board, type='all')
+        adjacent_fields_with_pieces = []
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.piece and not adjacent_field.piece.immune('Sky'):
+                adjacent_fields_with_pieces.append(adjacent_field)
+
+        jump_locations = []
+
+        for field in adjacent_fields_with_pieces:
+            diff_x = field.x - self.piece.location.x
+            diff_y = field.y - self.piece.location.y
+            jump_location = board.get_field(field.x + diff_x, field.y + diff_y)
+            if jump_location and jump_location.check_legal_movement(self.piece):
+                jump_locations.append(jump_location)
+
+        return jump_locations
+
+
+
 
 class SunPower(Power):
     def __init__(self, piece):
@@ -547,6 +578,43 @@ class SunPower(Power):
         self.set_target_types(['field'])
         self.confirm_message = "Move here?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self, board):
+        self.piece.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board):
+
+        target_1 = board.get_field(self.piece.location.x + 2, self.piece.location.y)
+        target_2 = board.get_field(self.piece.location.x - 2, self.piece.location.y)
+        target_3 = board.get_field(self.piece.location.x, self.piece.location.y + 2)
+        target_4 = board.get_field(self.piece.location.x, self.piece.location.y - 2)
+
+        pass_1 = board.get_field(self.piece.location.x + 1, self.piece.location.y)
+        pass_2 = board.get_field(self.piece.location.x - 1, self.piece.location.y)
+        pass_3 = board.get_field(self.piece.location.x, self.piece.location.y + 1)
+        pass_4 = board.get_field(self.piece.location.x, self.piece.location.y - 1)
+
+        target_fields = []
+        if self.check_target(target_1, pass_1):
+            target_fields.append(target_1)
+        if self.check_target(target_2, pass_2):
+            target_fields.append(target_2)
+        if self.check_target(target_3, pass_3):
+            target_fields.append(target_3)
+        if self.check_target(target_4, pass_4):
+            target_fields.append(target_4)
+
+        return target_fields
+
+    def check_target(self, target_field, pass_through_field):
+        if not target_field:
+            return False
+        if not pass_through_field:
+            return False
+        if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
+            return True
+        else:
+            return False
 
 
 class QuakePower(Power):

@@ -65,9 +65,9 @@ class Piece:
         self.oblivion = 0
         self.liberation = 0
 
-        self.ocean_fields = []
-        self.drought_fields = []
-        self.flame_fields = []
+        self.ocean_fields = set()
+        self.drought_fields = set()
+        self.flame_fields = set()
 
         self.symbol_image = None
 
@@ -165,6 +165,8 @@ class Piece:
             field.deactivate_drought(self)
         for field in self.ocean_fields:
             field.deactivate_ocean(self)
+        self.ocean_fields = set()
+        self.drought_fields = set()
         pieces.active_pieces.append(self)
         pieces.passive_pieces.remove(self)
 

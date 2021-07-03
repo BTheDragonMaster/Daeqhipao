@@ -89,6 +89,7 @@ class TurnManager:
                 self.power.select_barrier_1(target.barrier, self.board)
 
     def zaopeng(self):
+
         if self.pieces.check_zaopeng(self.current_player):
             hide_piece_buttons(self.screen, self.active_buttons)
             self.pieces.zaopeng(self.current_player)
@@ -101,6 +102,7 @@ class TurnManager:
                 show_remove_barrier_button(self.screen, self.active_buttons)
 
             self.current_piece = None
+            self.new_state('zaopeng')
 
             return True
 
@@ -127,6 +129,10 @@ class TurnManager:
         self.has_moved = False
         self.has_used_power = False
         self.reset_states()
+
+        if self.zaopeng():
+            self.new_state('zaopeng start turn')
+
         self.set_selectable_fields()
 
     def reset_piece_selection(self):
@@ -203,17 +209,22 @@ class TurnManager:
 
 
     def random_click(self):
-        self.hover = False
-        hide_piece_buttons(self.screen, self.active_buttons)
-        if self.current_piece and self.has_moved:
-            show_end_turn_button(self.screen, self.active_buttons)
-            show_power_button(self.screen, self.active_buttons)
+        state = self.get_current_state()
 
-        if self.current_piece and self.power and self.get_current_state() == 'select power target':
-            self.reset_power()
-
+        if state in {'zaopeng', 'place barrier', 'place barrier start turn', 'remove barrier', 'remove barrier start turn'}:
+            pass
         else:
-            self.reset_piece_selection()
+            self.hover = False
+            hide_piece_buttons(self.screen, self.active_buttons)
+            if self.current_piece and self.has_moved:
+                show_end_turn_button(self.screen, self.active_buttons)
+                show_power_button(self.screen, self.active_buttons)
+
+            if self.current_piece and self.power and self.get_current_state() == 'select power target':
+                self.reset_power()
+
+            else:
+                self.reset_piece_selection()
 
 
     def detect_click_location(self, mouse):
@@ -295,6 +306,7 @@ class TurnManager:
         self.new_state('confirm or reset')
 
     def do_field_action(self, field):
+        print(self.selectable_fields)
         state = self.get_current_state()
         if state == 'select piece':
             if field in self.selectable_fields:
@@ -320,15 +332,23 @@ class TurnManager:
             else:
                 self.reset_power()
 
-        elif state == 'place barrier':
+        elif state == 'place barrier' or state == 'place barrier start turn':
             if not field.occupied and not field.type == 'temple square':
                 self.place_zaopeng_barrier(field)
+            if state == 'place barrier':
                 self.next_turn()
+            else:
+                self.reset_piece_selection()
+                hide_piece_buttons(self.screen, self.active_buttons)
 
-        elif state == 'remove barrier':
+        elif state == 'remove barrier' or state == 'remove barrier start turn':
             if field.barrier:
                 self.remove_zaopeng_barrier(field)
+            if state == 'remove barrier':
                 self.next_turn()
+            else:
+                self.reset_piece_selection()
+                hide_piece_buttons(self.screen, self.active_buttons)
 
         elif state == 'select use power or end turn':
             self.random_click()
@@ -406,11 +426,18 @@ class TurnManager:
         elif button.text == "PLACE BARRIER":
             button.selected = True
             REMOVE_BARRIER_BUTTON.selected = False
-            self.new_state('place barrier')
+            if state in {'zaopeng', 'remove barrier'}:
+                self.new_state('place barrier')
+            elif state in {'zaopeng start turn', 'remove barrier start turn'}:
+                self.new_state('place barrier start turn')
         elif button.text == "REMOVE BARRIER":
-            self.new_state('remove barrier')
             button.selected = True
             PLACE_BARRIER_BUTTON.selected = False
+            if state in {'zaopeng', 'place barrier'}:
+                self.new_state('remove barrier')
+            elif state in {'zaopeng start turn', 'place barrier start turn'}:
+                self.new_state('remove barrier start turn')
+
 
         else:
             if state in {'select power', 'confirm or reset'}:

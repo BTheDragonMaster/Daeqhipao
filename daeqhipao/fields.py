@@ -77,8 +77,7 @@ class Field:
     def activate_ocean(self, piece):
         self.ocean = True
         self.ocean_casters.add(piece)
-        print(self.ocean_casters)
-        piece.ocean_fields.append(self)
+        piece.ocean_fields.add(self)
 
     def deactivate_ocean(self, piece):
         self.ocean_casters.remove(piece)
@@ -88,7 +87,7 @@ class Field:
     def activate_drought(self, piece):
         self.drought = True
         self.drought_casters.add(piece)
-        piece.drought_fields.append(self)
+        piece.drought_fields.add(self)
 
     def deactivate_drought(self, piece):
         self.drought_casters.remove(piece)
@@ -202,14 +201,10 @@ class Field:
             x = coord_combination[0]
             y = coord_combination[1]
 
-            try:
+            field = board.get_field(x, y)
 
-                field = board.board[x][y]
-
-                if field.type != 'no field':
-                    adjacent.append(field)
-            except IndexError:
-                pass
+            if field:
+                adjacent.append(field)
 
         return adjacent
 

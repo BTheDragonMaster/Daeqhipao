@@ -44,34 +44,36 @@ player_3.set_field_ownership(board)
 piece_1 = Builder(1, player_1)
 piece_1.set_location((5, 9), board)
 
-piece_2 = Impression(2, player_1)
-piece_2.set_location((3, 9), board)
+#piece_2 = Impression(2, player_1)
+#piece_2.set_location((3, 9), board)
 
-piece_3 = Void(3, player_1)
-piece_3.set_location((4, 9), board)
+#piece_3 = Void(3, player_1)
+#piece_3.set_location((4, 9), board)
 
 piece_4 = Death(4, player_1)
 piece_4.set_location((6, 9), board)
 
-piece_5 = Earth(5, player_1)
-piece_5.set_location((7, 9), board)
+#piece_5 = Earth(5, player_1)
+#piece_5.set_location((7, 9), board)
 
 piece_6 = Builder(6, player_3)
 piece_6.set_location((5, 1), board)
 
-piece_7 = Life(7, player_3)
-piece_7.set_location((3, 1), board)
+#piece_7 = Life(7, player_3)
+#piece_7.set_location((3, 1), board)
 
 piece_8 = Void(8, player_3)
 piece_8.set_location((4, 1), board)
 
-piece_9 = Drought(9, player_3)
-piece_9.set_location((6, 1), board)
+#piece_9 = Drought(9, player_3)
+#piece_9.set_location((6, 1), board)
 
-piece_10 = Earth(10, player_3)
-piece_10.set_location((7, 1), board)
+#piece_10 = Earth(10, player_3)
+#piece_10.set_location((7, 1), board)
 
-pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8, piece_9, piece_10])
+pieces = Pieces([piece_1, piece_4, piece_6, piece_8])
+
+#pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8, piece_9, piece_10])
 players = [player_1, player_3]
 
 turn_manager = TurnManager(players, board, screen, pieces, BARRIERS)
