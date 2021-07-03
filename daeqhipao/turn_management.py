@@ -62,7 +62,6 @@ class TurnManager:
         return state
 
     def select_target(self, target):
-        print("hi")
         hide_piece_buttons(self.screen, self.active_buttons)
         show_reset_selection_button(self.screen, self.active_buttons)
         target_type = self.power.get_target_type()
@@ -148,7 +147,11 @@ class TurnManager:
 
         for piece in self.pieces.pieces:
             if piece.active and piece.player == self.current_player:
-                self.selectable_fields.append(piece.location)
+                if piece.idea:
+                    self.selectable_fields = [piece.location]
+                    break
+                else:
+                    self.selectable_fields.append(piece.location)
 
     def select_piece(self, piece):
         self.current_piece = piece
@@ -177,7 +180,7 @@ class TurnManager:
 
     def show_power_targets(self, mouse):
 
-        self.current_target_fields = self.power.get_target_fields(self.pieces, self.barriers, self.board)
+        self.current_target_fields = self.power.get_target_fields(self.pieces, self.barriers, self.board, self.players)
         self.power.highlight_all_targets(self, mouse)
 
     def show_power_options(self):
@@ -202,7 +205,8 @@ class TurnManager:
 
         self.current_piece.move(target_square, self.board)
         hide_move_button(self.screen, self.active_buttons)
-        show_end_turn_button(self.screen, self.active_buttons)
+        if not self.current_piece.idea:
+            show_end_turn_button(self.screen, self.active_buttons)
         self.has_moved = True
         self.new_state('select use power or end turn')
         self.board.redraw_field(target_square, colour=HIGHLIGHT_BOARD)
@@ -217,11 +221,14 @@ class TurnManager:
             self.hover = False
             hide_piece_buttons(self.screen, self.active_buttons)
             if self.current_piece and self.has_moved:
-                show_end_turn_button(self.screen, self.active_buttons)
+                if not self.current_piece.idea:
+                    show_end_turn_button(self.screen, self.active_buttons)
                 show_power_button(self.screen, self.active_buttons)
 
-            if self.current_piece and self.power and self.get_current_state() == 'select power target':
+            if self.current_piece and self.power and state =='select power target':
                 self.reset_power()
+            elif self.current_piece and self.has_moved and state == 'select use power or end turn':
+                pass
 
             else:
                 self.reset_piece_selection()
@@ -264,7 +271,6 @@ class TurnManager:
         fields_to_redraw += self.current_target_fields
 
         hide_piece_buttons(self.screen, self.active_buttons)
-        print(fields_to_redraw)
 
         self.power.reset_targets()
         self.has_used_power = False
@@ -273,7 +279,8 @@ class TurnManager:
             self.board.redraw_field(field, BACKGROUND_BOARD)
 
         if self.has_moved:
-            show_end_turn_button(self.screen, self.active_buttons)
+            if not self.current_piece.idea:
+                show_end_turn_button(self.screen, self.active_buttons)
             show_power_button(self.screen, self.active_buttons)
             self.new_state('select use power or end turn')
         else:
@@ -306,7 +313,6 @@ class TurnManager:
         self.new_state('confirm or reset')
 
     def do_field_action(self, field):
-        print(self.selectable_fields)
         state = self.get_current_state()
         if state == 'select piece':
             if field in self.selectable_fields:

@@ -28,8 +28,8 @@ class Player:
         self.god = None
         self.name = None
         
-        self.idea = []
-        self.illusion = []
+        self.idea = False
+        self.illusion = False
         self.time = 0
         self.time_pieces = 0
 

@@ -53,12 +53,15 @@ class Piece:
         self.active = True
         self.player = player
 
+        self.idea = False
+        self.illusion = False
         self.perception = 0
         self.legacy = False
         self.legacy_frequency = False
         self.legacy_duration = False
         
-        self.union = []
+        self.union = False
+        self.union_partners = set()
         self.communication = 0
 
         self.blindness = 0
@@ -158,7 +161,9 @@ class Piece:
             self.active = False
             pieces.active_pieces.remove(self)
             pieces.passive_pieces.append(self)
-            
+            if self.union:
+                self.trigger_union(pieces, 'sleep')
+
     def wake(self, pieces):
         self.active = True
         for field in self.drought_fields:
@@ -170,6 +175,9 @@ class Piece:
         pieces.active_pieces.append(self)
         pieces.passive_pieces.remove(self)
 
+        if self.union:
+            self.trigger_union(pieces, 'wake')
+
     def set_perception(self, user):
         if user.legacy_duration:
             self.perception = 4
@@ -180,10 +188,23 @@ class Piece:
         assert self.perception >= 0
 
     def activate_union(self, piece):
-        self.union.append(piece)
+        self.union = True
+        self.union_partners.add(piece)
+        for piece_2 in piece.union_partners:
+            if not piece_2 == self:
+                self.union_partners.add(piece)
 
-    def deactivate_union(self):
-        self.union = []
+    def trigger_union(self, pieces, wake_or_sleep):
+
+        self.union = False
+        for union_partner in self.union_partners:
+            union_partner.union = False
+            union_partner.union_partners = set()
+            if wake_or_sleep == 'wake':
+                union_partner.wake(pieces)
+            elif wake_or_sleep == 'sleep':
+                union_partner.sleep(pieces)
+        self.union_partners = set()
 
     def deactivate_legacy(self, choice):
         self.legacy_duration = False
@@ -207,11 +228,12 @@ class Piece:
         self.player.illusion.remove(self)
 
     def activate_idea(self):
-        self.player.idea.append(self)
+        self.idea = True
+        self.player.idea = True
         
     def deactivate_idea(self):
-        assert self in self.idea.player
-        self.idea.player.remove(self)
+        self.idea = False
+        self.player.idea = False
 
     def set_blindness(self, user):
         if user.legacy_duration:

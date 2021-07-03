@@ -190,7 +190,7 @@ class Power:
     def use_power(self, *args):
         pass
 
-    def get_target_fields(self, pieces, barriers, board):
+    def get_target_fields(self, pieces, barriers, board, players):
 
         targets = []
 
@@ -224,6 +224,8 @@ class Power:
             targets = self.get_target_fields_1(board)
         elif self.name == 'Sky':
             targets = self.get_target_fields_1(board)
+        elif self.name == 'Idea':
+            targets = self.get_target_fields_1(players, pieces)
 
 
         return targets
@@ -251,8 +253,11 @@ class Power:
             self.use_power(board)
         elif self.name == 'Sky':
             self.use_power(board)
+        elif self.name == 'Idea':
+            self.use_power()
 
         self.reset_targets()
+        self.piece.deactivate_idea()
         self.piece.sleep(pieces)
 
 
@@ -338,6 +343,7 @@ class ImpressionPower(Power):
 
         return targets
 
+
 class CommunicationPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -346,6 +352,7 @@ class CommunicationPower(Power):
         self.confirm_message = "Give this piece the option to move two extra times next turn (three times in total)_instead of using its power?"
         self.highlight_types = ["highlight all targets"]
 
+
 class FamiliarityPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -353,6 +360,7 @@ class FamiliarityPower(Power):
         self.set_target_types(['piece', 'piece'])
         self.confirm_message = "Borrow this piece's power?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
+
 
 class LifePower(Power):
     def __init__(self, piece):
@@ -424,6 +432,32 @@ class IdeaPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Force this piece to use its power next turn?"
         self.highlight_types = ["highlight all targets"]
+
+    def use_power(self):
+        self.selected_piece_1.activate_idea()
+
+    def get_target_fields_1(self, players, pieces):
+        illusion_players = []
+        legal_players = []
+
+        for player in players:
+            if player != self.piece.player and not player.idea:
+                if player.illusion:
+                    illusion_players.append(player)
+                else:
+                    legal_players.append(player)
+
+        target_fields = []
+
+        for piece in pieces.pieces:
+            if piece.active and not piece.immune('Idea'):
+                if piece.player in legal_players:
+                    target_fields.append(piece.location)
+                elif piece.player in illusion_players:
+                    if piece.illusion:
+                        target_fields.append(piece.location)
+
+        return target_fields
 
 class MetamorphosisPower(Power):
     def __init__(self, piece):
@@ -567,8 +601,6 @@ class SkyPower(Power):
                 jump_locations.append(jump_location)
 
         return jump_locations
-
-
 
 
 class SunPower(Power):
@@ -754,7 +786,7 @@ class EndPower(Power):
         super().__init__(piece)
         self.name = 'End'
         self.set_target_types(['piece', 'field'])
-        self.confirm_message = "Move this piece back to your temple area?"
+        self.confirm_message = "Move this piece back to their temple area?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
 
 
