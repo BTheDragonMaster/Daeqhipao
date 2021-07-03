@@ -215,15 +215,32 @@ class Field:
             return False
         elif self.type == 'temple square' and self.owner == piece.player:
             return False
-        elif self.ocean and piece.gender == 'female' and not piece.immune('Ocean'):
-            return False
-        elif self.drought and piece.gender == 'male' and not piece.immune('Drought'):
-            return False
-        elif self.flame and piece.player not in self.flame_casters and not piece.immune("Flame"):
+        elif not self.permitted_area_condition(piece):
             return False
 
         return True
 
+    def check_flame(self, piece):
+        if self.flame:
+            if piece.player in self.flame_casters and len(self.flame_casters) == 1:
+                return False
+            if piece.immune("Flame"):
+                return False
+
+            return True
+
+        else:
+            return False
+
+    def permitted_area_condition(self, piece):
+        if self.ocean and piece.gender == 'female' and not piece.immune('Ocean'):
+            return False
+        if self.drought and piece.gender == 'male' and not piece.immune('Drought'):
+            return False
+        if self.check_flame(piece):
+            return False
+
+        return True
 
     def get_legal_adjacent(self, board, piece):
 

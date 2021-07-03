@@ -240,6 +240,8 @@ class Power:
             targets = self.get_target_fields_1(board)
         elif self.name == 'Sky':
             targets = self.get_target_fields_1(board)
+        elif self.name == 'Shadow':
+            targets = self.get_target_fields_1(board)
         elif self.name == 'Idea':
             targets = self.get_target_fields_1(players, pieces)
         elif self.name == 'Illusion':
@@ -249,12 +251,22 @@ class Power:
                 targets = self.get_target_fields_1(board)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)
-
         elif self.name == 'Wave':
             if self.target_nr == 2:
                 targets = self.get_target_fields_1(board, pieces)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)
+        elif self.name == 'Fog':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(board, pieces)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(board)
+        elif self.name == 'Bloodmaker':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(board)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(board)
+
 
 
 
@@ -285,6 +297,8 @@ class Power:
             self.use_power(board)
         elif self.name == 'Sky':
             self.use_power(board)
+        elif self.name == 'Shadow':
+            self.use_power(board)
         elif self.name == 'Idea':
             self.use_power()
         elif self.name == 'Illusion':
@@ -292,6 +306,10 @@ class Power:
         elif self.name == 'Quake':
             self.use_power(board)
         elif self.name == 'Wave':
+            self.use_power(board)
+        elif self.name == 'Fog':
+            self.use_power(board)
+        elif self.name == 'Bloodmaker':
             self.use_power(board)
 
         self.reset_targets()
@@ -372,7 +390,6 @@ class ImpressionPower(Power):
         self.piece.select_piece(self.selected_piece_1, self.piece.name)
 
         board.swap_objects(self.piece, self.selected_piece_1)
-
 
     def get_target_fields_1(self, pieces):
 
@@ -838,6 +855,27 @@ class ShadowPower(Power):
         self.confirm_message = "Jump here?"
         self.highlight_types = ["highlight all targets"]
 
+    def use_power(self, board):
+        self.piece.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, board):
+        adjacent_fields = self.piece.location.get_adjacent(board, type='all')
+        adjacent_fields_with_barriers = []
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.barrier :
+                adjacent_fields_with_barriers.append(adjacent_field)
+
+        jump_locations = []
+
+        for field in adjacent_fields_with_barriers:
+            diff_x = field.x - self.piece.location.x
+            diff_y = field.y - self.piece.location.y
+            jump_location = board.get_field(field.x + diff_x, field.y + diff_y)
+            if jump_location and jump_location.check_legal_movement(self.piece):
+                jump_locations.append(jump_location)
+
+        return jump_locations
+
 
 class MetalmakerPower(Power):
     def __init__(self, piece):
@@ -856,6 +894,44 @@ class BloodmakerPower(Power):
         self.confirm_message = "Switch this barrier with this piece?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
 
+    def use_power(self, board):
+        board.swap_objects(self.selected_barrier_1, self.selected_piece_1)
+
+    def get_target_fields_1(self, board):
+
+        targets = []
+
+        for field in board.fields:
+            if field.barrier:
+                adjacent_fields = field.barrier.location.get_adjacent(board, type='all')
+                potential_target = False
+                for adjacent_field in adjacent_fields:
+                    if adjacent_field.piece and self.check_swap_legal(field.barrier, adjacent_field.piece):
+                        potential_target = True
+                        break
+                if potential_target:
+                    targets.append(field.barrier.location)
+
+        return targets
+
+    def get_target_fields_2(self, board):
+        targets = []
+        adjacent_fields = self.selected_barrier_1.location.get_adjacent(board, type='all')
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.piece and self.check_swap_legal(self.selected_barrier_1, adjacent_field.piece):
+                targets.append(adjacent_field)
+
+        return targets
+
+    def check_swap_legal(self, barrier, piece):
+        if piece.immune('Bloodmaker'):
+            return False
+        if not barrier.location.permitted_area_condition(piece):
+            return False
+
+        return True
+
+
 
 class FogPower(Power):
     def __init__(self, piece):
@@ -864,6 +940,49 @@ class FogPower(Power):
         self.set_target_types(['piece', 'piece'])
         self.confirm_message = "Switch these pieces?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
+
+    def use_power(self, board):
+        board.swap_objects(self.selected_piece_1, self.selected_piece_2)
+
+    def get_target_fields_1(self, board, pieces):
+
+        targets = []
+
+        for piece in pieces.pieces:
+            if not piece.immune('Fog'):
+                adjacent_fields = piece.location.get_adjacent(board, type='all')
+                potential_target = False
+                for adjacent_field in adjacent_fields:
+                    if adjacent_field.piece and self.check_swap_legal(piece, adjacent_field.piece):
+                        potential_target = True
+                        break
+                if potential_target:
+                    targets.append(piece.location)
+
+        return targets
+
+    def get_target_fields_2(self, board):
+        targets = []
+        adjacent_fields = self.selected_piece_1.location.get_adjacent(board, type='all')
+        for adjacent_field in adjacent_fields:
+            if adjacent_field.piece and self.check_swap_legal(self.selected_piece_1, adjacent_field.piece):
+                targets.append(adjacent_field)
+
+        return targets
+
+    def check_swap_legal(self, piece_1, piece_2):
+        if piece_1.immune('Fog'):
+            return False
+        if piece_2.immune('Fog'):
+            return False
+        if not piece_1.location.permitted_area_condition(piece_2):
+            return False
+        if not piece_2.location.permitted_area_condition(piece_1):
+            return False
+
+        return True
+
+
 
 
 class FlamePower(Power):
