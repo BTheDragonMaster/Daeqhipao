@@ -65,15 +65,15 @@ piece_7.set_location((3, 1), board)
 piece_8 = Void(8, player_3)
 piece_8.set_location((4, 1), board)
 
-#piece_9 = Drought(9, player_3)
-#piece_9.set_location((6, 1), board)
+piece_9 = Drought(9, player_3)
+piece_9.set_location((6, 1), board)
 
-#piece_10 = Earth(10, player_3)
-#piece_10.set_location((7, 1), board)
+piece_10 = Idea(10, player_3)
+piece_10.set_location((7, 1), board)
 
-pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8])
+#pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8])
 
-#pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8, piece_9, piece_10])
+pieces = Pieces([piece_1, piece_2, piece_3, piece_4, piece_5, piece_6, piece_7, piece_8, piece_9, piece_10])
 players = [player_1, player_3]
 
 turn_manager = TurnManager(players, board, screen, pieces, BARRIERS)

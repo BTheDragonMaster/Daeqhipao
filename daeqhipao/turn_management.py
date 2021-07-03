@@ -246,6 +246,9 @@ class TurnManager:
             elif self.current_piece and self.has_moved and state == 'select use power or end turn':
                 pass
 
+            elif self.current_piece and self.has_moved and state == 'select power':
+                pass
+
             else:
                 self.reset_piece_selection()
 
@@ -319,11 +322,9 @@ class TurnManager:
             elif type(selected_entity) == Button or issubclass(type(selected_entity), Button):
                 self.do_button_action(selected_entity, mouse)
         else:
-            if state in {'select power', 'confirm or reset'}:
+            if state in {'select power target', 'confirm or reset'}:
                 self.reset_power()
 
-            elif state == 'select use power or end turn':
-                self.random_click()
             else:
                 self.random_click()
 

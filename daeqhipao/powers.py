@@ -1154,7 +1154,7 @@ class NightPower(Power):
 
         adjacent_fields = self.piece.location.get_adjacent(board, type='all')
         for adjacent_field in adjacent_fields:
-            if adjacent_field.barrier and self.piece.location.permitted_area_condition(self.piece):
+            if adjacent_field.barrier and adjacent_field.permitted_area_condition(self.piece):
                 target_fields.append(adjacent_field)
 
         return target_fields
