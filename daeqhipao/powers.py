@@ -28,6 +28,18 @@ class Power:
 
         self.fixed_affected_area = False
 
+    def check_power_usable(self, pieces, barriers, board, players):
+        if not self.piece.active:
+            return False
+        if self.fixed_affected_area:
+            return True
+        targets = self.get_target_fields(pieces, barriers, board, players)
+
+        if not targets:
+            return False
+        return True
+
+
     def set_target_types(self, selection_types):
         self.target_nr = len(selection_types)
         self.target_types = selection_types
@@ -223,6 +235,7 @@ class Power:
                 targets = self.get_target_fields_2(board)
         elif self.name == 'Void':
             if self.target_nr == 2:
+                print('hey hey hey')
                 targets = self.get_target_fields_1(board)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)

@@ -38,11 +38,20 @@ class Pieces:
     def zaopeng(self, player):
         for piece in self.pieces:
             if piece.player == player:
-                if not piece.oblivion:
-                    piece.wake(self)
-                else:
-                    piece.countdown_oblivion()
+                if not piece.active:
+                    if not piece.oblivion:
+                        piece.wake(self)
+                    else:
+                        piece.countdown_oblivion()
         self.set_active_and_passive_pieces()
+
+    def get_pieces_player(self, player):
+        player_pieces = []
+        for piece in self.pieces:
+            if piece.player == player:
+                player_pieces.append(piece)
+
+        return player_pieces
 
 
 class Piece:
@@ -102,6 +111,20 @@ class Piece:
         legal_fields = self.location.get_legal_adjacent(board, self)
 
         return legal_fields
+
+    def is_last_active_piece(self, pieces):
+        if self.active:
+            active_count = 0
+            for piece in pieces.get_pieces_player(self.player):
+                if piece.active:
+                    active_count += 1
+
+            if active_count == 1:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def set_piece_rectangle(self):
         x = (1 + self.location.x) * SQUARE_WIDTH + PIECE_PADDING
@@ -314,7 +337,6 @@ class Piece:
             raise IllegalMove('temple')
 
     def move(self, target_location, board):
-        print(self.name)
         original_x = self.location.x
         original_y = self.location.y
 

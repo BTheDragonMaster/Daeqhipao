@@ -50,7 +50,7 @@ piece_2.set_location((3, 9), board)
 piece_3 = Fog(3, player_1)
 piece_3.set_location((4, 9), board)
 
-piece_4 = Flame(4, player_1)
+piece_4 = Illusion(4, player_1)
 piece_4.set_location((6, 9), board)
 
 piece_5 = Night(5, player_1)

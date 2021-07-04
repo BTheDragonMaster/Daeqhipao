@@ -87,6 +87,21 @@ class TurnManager:
             else:
                 self.power.select_barrier_1(target.barrier)
 
+    def penalty_zaopeng(self):
+        hide_piece_buttons(self.screen, self.active_buttons)
+        self.pieces.zaopeng(self.current_player)
+        for piece in self.pieces.pieces:
+            if piece.player == self.current_player:
+                self.board.draw_piece(piece)
+        if self.barriers.unused_barriers:
+            show_place_barrier_button(self.screen, self.active_buttons)
+        if self.barriers.used_barriers:
+            show_remove_barrier_button(self.screen, self.active_buttons)
+
+        self.current_piece = None
+        self.new_state('zaopeng')
+
+
     def zaopeng(self):
 
         if self.pieces.check_zaopeng(self.current_player):
@@ -148,21 +163,85 @@ class TurnManager:
     def set_selectable_fields(self):
         self.selectable_fields = []
 
-        for piece in self.pieces.pieces:
-            if piece.active and piece.player == self.current_player:
-                if piece.idea or piece.illusion:
-                    self.selectable_fields = [piece.location]
-                    break
-                else:
+        pieces_able_to_use_power = []
+
+        for piece in self.pieces.get_pieces_player(self.current_player):
+            if piece.active:
+                movement_options = piece.get_movement_options(self.board)
+                can_use_power_from_current_pos = self.power_usable_from_square(piece.location, piece)
+                can_use_power_from_other_pos = False
+
+                if not piece.illusion:
+                    if not can_use_power_from_current_pos:
+                        for power_cast_location in movement_options:
+                            if self.power_usable_from_square(power_cast_location, piece):
+                                can_use_power_from_other_pos = True
+                                break
+
+                if can_use_power_from_current_pos or can_use_power_from_other_pos:
+
+                    pieces_able_to_use_power.append(piece)
+                if piece.idea:
+                    if can_use_power_from_current_pos or can_use_power_from_other_pos:
+                        self.selectable_fields = [piece.location]
+                        break
+                    else:
+                        piece.deactivate_idea()
+
+                if piece.illusion and piece.idea:
+                    can_use_power_from_other_pos = False
+
+                    for power_cast_location in movement_options:
+                        if self.power_usable_from_square(power_cast_location, piece):
+                            can_use_power_from_other_pos = True
+                            break
+
+                    if can_use_power_from_other_pos:
+                        self.selectable_fields = [piece.location]
+                        break
+                    else:
+                        piece.deactivate_idea()
+
+                if piece.illusion:
+
+                    if movement_options:
+                        self.selectable_fields = [piece.location]
+                        break
+                    else:
+                        piece.deactivate_illusion()
+
+                if movement_options or can_use_power_from_current_pos:
                     self.selectable_fields.append(piece.location)
+
+        if not pieces_able_to_use_power:
+            self.current_player.penalty_turns -= 1
+            if not self.selectable_fields:
+                if not self.current_player.penalty_turns:
+                    self.penalty_zaopeng()
+        else:
+            self.current_player.penalty_turns = 2
 
     def select_piece(self, piece):
         self.current_piece = piece
         self.movement_options = self.current_piece.get_movement_options(self.board)
+        if self.current_piece.idea:
+            legal_moves = []
+            for movement_option in self.movement_options:
+                if self.power_usable_from_square(movement_option, self.current_piece):
+                    legal_moves.append(movement_option)
+            self.movement_options = legal_moves
+
         if self.current_piece.illusion:
             show_move_button(self.screen, self.active_buttons)
         else:
-            show_piece_buttons(self.screen, self.active_buttons)
+            if not self.power_usable_from_square(self.current_piece.location, self.current_piece):
+                show_move_button(self.screen, self.active_buttons)
+            elif not self.movement_options:
+                print('Hello')
+                show_power_button(self.screen, self.active_buttons)
+            else:
+                show_piece_buttons(self.screen, self.active_buttons)
+
         self.new_state('select move or use power')
 
     def show_movement_options(self):
@@ -207,9 +286,35 @@ class TurnManager:
         for power in self.current_piece.powers:
             y = int(relative_position * HEIGHT)
             position = (x, y)
-            button = PowerButton(position, dimensions, power)
-            show_power_choice_button(self.screen, self.active_buttons, button)
-            relative_position += 0.05
+
+            if power.check_power_usable(self.pieces, self.barriers, self.board, self.players):
+                button = PowerButton(position, dimensions, power)
+                show_power_choice_button(self.screen, self.active_buttons, button)
+                relative_position += 0.05
+
+    def power_usable_from_square(self, square, piece):
+        square_of_origin = self.board.get_field(piece.location.x, piece.location.y)
+        piece.move(square, self.board)
+        power_usable = False
+
+        if piece.type == 'Heir':
+            if piece.power.check_power_usable(self.pieces, self.barriers, self.board, self.players):
+
+                power_usable = True
+            else:
+                power_usable = False
+        elif piece.type == 'God':
+            for power in piece.powers:
+                if power.check_power_usable(self.pieces, self.barriers, self.board, self.players):
+                    power_usable = True
+                    break
+
+        piece.move(square_of_origin, self.board)
+
+        if power_usable:
+            return True
+        else:
+            return False
 
     def move_piece(self, target_square):
 
@@ -218,9 +323,30 @@ class TurnManager:
 
         self.current_piece.move(target_square, self.board)
         hide_move_button(self.screen, self.active_buttons)
+
+        if self.current_piece.idea:
+            power_usable = False
+            if self.current_piece.type == 'Heir':
+                if self.current_piece.power.check_power_usable(self.pieces, self.barriers, self.board, self.players):
+
+                    power_usable = True
+                else:
+                    power_usable = False
+            elif self.current_piece.type == 'God':
+                for power in self.current_piece.powers:
+                    if power.check_power_usable(self.pieces, self.barriers, self.board, self.players):
+                        power_usable = True
+                        break
+            if not power_usable:
+                self.current_piece.deactivate_idea()
+
         if not self.current_piece.idea:
             show_end_turn_button(self.screen, self.active_buttons)
-        if self.current_piece.illusion:
+
+        if self.current_piece.idea:
+            show_power_button(self.screen, self.active_buttons)
+        elif self.power_usable_from_square(self.current_piece.location, self.current_piece):
+            print("Power usable")
             show_power_button(self.screen, self.active_buttons)
         self.has_moved = True
         self.current_piece.deactivate_illusion()
@@ -300,20 +426,23 @@ class TurnManager:
         if self.has_moved:
             if not self.current_piece.idea:
                 show_end_turn_button(self.screen, self.active_buttons)
-            show_power_button(self.screen, self.active_buttons)
+            if self.power_usable_from_square(self.current_piece.location, self.current_piece):
+                show_power_button(self.screen, self.active_buttons)
             self.new_state('select use power or end turn')
         else:
 
             if self.current_piece.illusion:
                 show_move_button(self.screen, self.active_buttons)
             else:
-                show_piece_buttons(self.screen, self.active_buttons)
+                if self.movement_options:
+                    show_move_button(self.screen, self.active_buttons)
+                if self.power_usable_from_square(self.current_piece.location, self.current_piece):
+                    show_power_button(self.screen, self.active_buttons)
             self.new_state('select move or use power')
 
 
     def do_click_action(self, mouse):
-        print(self.pieces.active_pieces)
-        print(self.pieces.passive_pieces)
+
         state = self.get_current_state()
         selected_entity = self.detect_click_location(mouse)
         if selected_entity:
@@ -454,7 +583,10 @@ class TurnManager:
             if not self.zaopeng():
                 self.next_turn()
         elif button.text == "END TURN":
-            self.next_turn()
+            if not self.current_player.penalty_turns:
+                self.penalty_zaopeng()
+            else:
+                self.next_turn()
         elif button.text == "RESET SELECTION":
             self.reset_power()
         elif button.text == "PLACE BARRIER":

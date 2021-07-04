@@ -32,6 +32,7 @@ class Player:
         self.illusion = False
         self.time = 0
         self.time_pieces = 0
+        self.penalty_turns = 2
 
         self.temple = PLAYER_PROPERTIES.player_to_temple_square[self.id]
         self.starting_squares = PLAYER_PROPERTIES.player_to_starting_squares[self.id]
