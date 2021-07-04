@@ -39,6 +39,7 @@ class Board:
         self.assign_field_types()
         self.set_all_fields()
         self.set_rectangles()
+        self.temple_squares = {}
 
 
     def draw_frame(self):
@@ -212,6 +213,7 @@ class Board:
         self.draw_pieces()
 
     def assign_field_types(self):
+
         for i, row in enumerate(self.board):
             for j, column in enumerate(row):
                 if i == 0 or i == 10:

@@ -1,10 +1,10 @@
 from daeqhipao.illegal_moves import IllegalPower
 
-POTENCY = {'Perception', 'Mind', 'Blindness', 'Oblivion', 'Liberation', 'Flame', 'Communication', 'Idea', 'Illusion'}
+POTENCY = {'Perception', 'Mind', 'Blindness', 'Oblivion', 'Liberation', 'Flame', 'Communication', 'Idea', 'Illusion', 'Director', 'Wiper', 'Connector', 'Gifter', 'Alchemist'}
 
 FREQUENCY = {'Life', 'Perception', 'Union', 'Impression', 'Familiarity', 'Metamorphosis', 'Death', 'Blindness', 'Liberation',
              'Earth', 'Ocean', 'Sky', 'Sun', 'Quake', 'Wave', 'Wind', 'Shadow', 'Metalmaker', 'Bloodmaker',
-             'Fog', 'Void', 'Drought', 'End', 'Night'}
+             'Fog', 'Void', 'Drought', 'End', 'Night', 'Gifter', 'Connector', 'Director', 'Wiper', 'Builder', 'Mover', 'Alchemist', 'Consumer'}
 
 class Power:
     def __init__(self, piece):
@@ -21,6 +21,8 @@ class Power:
         self.selected_field_2 = None
         self.selected_barrier_1 = None
         self.selected_barrier_2 = None
+
+        self.potency_or_frequency = None
 
         self.targets_1 = []
         self.targets_2 = []
@@ -199,6 +201,10 @@ class Power:
             else:
                 raise IllegalPower("Void can't use its power!")
 
+        if self.name == 'Time' or self.name == 'Legacy':
+            choice_1 = 'Increase potency'
+            choice_2 = 'Increase frequency'
+
         return choice_1, choice_2
 
     def get_target_type(self):
@@ -287,6 +293,15 @@ class Power:
                 targets = self.get_target_fields_1(pieces, board)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)
+        elif self.name == 'Time':
+            targets = self.get_target_fields_1(pieces)
+        elif self.name == 'Legacy':
+            targets = self.get_target_fields_1(pieces)
+        elif self.name == 'Metamorphosis':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(pieces)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(pieces)
 
         return targets
 
@@ -337,10 +352,19 @@ class Power:
             self.use_power(board, barriers)
         elif self.name == 'End':
             self.use_power(board)
+        elif self.name == 'Mind':
+            self.use_power(board)
+        elif self.name == 'Legacy':
+            self.use_power()
+        elif self.name == 'Time':
+            self.use_power()
+        elif self.name == 'Metamorphosis':
+            self.use_power(board, pieces)
 
         self.reset_targets()
         self.piece.deactivate_idea()
-        self.piece.sleep(pieces)
+        if not self.piece.frequency:
+            self.piece.sleep(pieces)
 
 
 class UnionPower(Power):
@@ -438,9 +462,9 @@ class FamiliarityPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
         self.name = 'Familiarity'
-        self.set_target_types(['piece', 'piece'])
+        self.set_target_types(['piece'])
         self.confirm_message = "Borrow this piece's power?"
-        self.highlight_types = ["highlight all targets", "highlight all targets"]
+        self.highlight_types = ["highlight all targets"]
 
 
 class LifePower(Power):
@@ -473,6 +497,18 @@ class PerceptionPower(Power):
         self.confirm_message = "Make this piece immune?"
         self.highlight_types = ["highlight all targets"]
 
+    def use_power(self):
+        self.selected_piece_1.activate_perception()
+
+    def get_target_fields_1(self, pieces):
+        target_fields = []
+
+        for piece in pieces.pieces:
+            if not piece.immune("Perception"):
+                target_fields.append(piece.location)
+        return target_fields
+
+
 class MindPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -482,6 +518,13 @@ class MindPower(Power):
         self.highlight_types = []
         self.fixed_affected_area = True
 
+    def use_power(self, board):
+        board.temple_squares[self.piece.player].mind = True
+
+    def get_target_fields_1(self, board):
+        return [board.temple_squares[self.piece.player]]
+
+
 class LegacyPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -489,6 +532,35 @@ class LegacyPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Allow this spiritual piece to increase the frequency or duration of its power next turn, or allow this Spiritual God piece to use two powers next turn?"
         self.highlight_types = ["highlight all targets"]
+        self.start_with_choice = True
+
+    def use_power(self):
+        if self.potency_or_frequency == 'potency':
+            if self.selected_piece_1.player == self.piece.player:
+                self.selected_piece_1.potency = 2
+            else:
+                self.selected_piece_1.potency = 1
+
+        elif self.potency_or_frequency == 'frequency':
+
+            if self.selected_piece_1.player == self.piece.player:
+                self.selected_piece_1.frequency = 2
+            else:
+                self.selected_piece_1.frequency = 1
+
+    def get_target_fields_1(self, pieces):
+        target_fields = []
+        for piece in pieces.spiritual_pieces:
+            if not piece.immune('Legacy'):
+                if self.potency_or_frequency == 'potency' and piece.name in POTENCY:
+                    target_fields.append(piece.location)
+                elif self.potency_or_frequency == 'frequency' and piece.name in FREQUENCY:
+                    target_fields.append(piece.location)
+                elif not self.potency_or_frequency and (piece.name in POTENCY or piece.name in FREQUENCY):
+                    target_fields.append(piece.location)
+
+        return target_fields
+
 
 class TimePower(Power):
     def __init__(self, piece):
@@ -497,6 +569,37 @@ class TimePower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Allow this physical piece to increase the frequency or duration of its power next turn, or allow this Physical God piece to use two powers next turn?"
         self.highlight_types = ["highlight all targets"]
+        self.start_with_choice = True
+
+    def use_power(self):
+        if self.potency_or_frequency == 'potency':
+            if self.selected_piece_1.player == self.piece.player:
+                self.selected_piece_1.potency = 2
+            else:
+                self.selected_piece_1.potency = 1
+
+        elif self.potency_or_frequency == 'frequency':
+
+            if self.selected_piece_1.player == self.piece.player:
+                self.selected_piece_1.frequency = 2
+            else:
+                self.selected_piece_1.frequency = 1
+
+    def get_target_fields_1(self, pieces):
+        print(pieces.physical_pieces)
+        target_fields = []
+        for piece in pieces.physical_pieces:
+            if not piece.immune('Time'):
+                if self.potency_or_frequency == 'potency' and piece.name in POTENCY:
+                    target_fields.append(piece.location)
+                elif self.potency_or_frequency == 'frequency' and piece.name in FREQUENCY:
+                    target_fields.append(piece.location)
+                elif not self.potency_or_frequency and (piece.name in POTENCY or piece.name in FREQUENCY):
+                    target_fields.append(piece.location)
+
+
+        return target_fields
+
 
 class IllusionPower(Power):
     def __init__(self, piece):
@@ -574,6 +677,41 @@ class MetamorphosisPower(Power):
         self.confirm_message = "Switch these two pieces and their ownership?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
 
+    def use_power(self, board, pieces):
+
+        original_player_1 = self.selected_piece_1.player
+        original_player_2 = self.selected_piece_2.player
+
+        if original_player_1 != original_player_2:
+            self.selected_piece_1.player = original_player_2
+            self.selected_piece_2.player = original_player_1
+        board.swap_objects(self.selected_piece_1, self.selected_piece_2)
+
+    def get_target_fields_1(self, pieces):
+
+        targets = []
+
+        for name, god_group in pieces.god_groups.items():
+            true_targets = []
+            if len(god_group) > 1:
+                for piece in god_group:
+                    if piece.active and not piece.immune('Metamorphosis'):
+                        true_targets.append(piece.location)
+
+            if len(true_targets) > 1:
+                targets += true_targets
+
+        return targets
+
+    def get_target_fields_2(self, pieces):
+        targets = []
+        for piece in pieces.god_groups[self.selected_piece_1.god_group]:
+            if piece.active and not piece == self.selected_piece_1 and not piece.immune('Metamorphosis'):
+                targets.append(piece.location)
+
+        return targets
+
+
 class DeathPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -595,6 +733,7 @@ class DeathPower(Power):
     def use_power(self, pieces):
         self.selected_piece_1.sleep(pieces)
 
+
 class BlindnessPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -602,6 +741,7 @@ class BlindnessPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Prevent this piece from moving in the next two turns?"
         self.highlight_types = ["highlight all targets"]
+
 
 class OblivionPower(Power):
     def __init__(self, piece):
@@ -611,6 +751,7 @@ class OblivionPower(Power):
         self.confirm_message = "Prevent this piece resetting next Zaopeng?"
         self.highlight_types = ["highlight all targets"]
 
+
 class LiberationPower(Power):
     def __init__(self, piece):
         super().__init__(piece)
@@ -618,6 +759,7 @@ class LiberationPower(Power):
         self.set_target_types(['piece'])
         self.confirm_message = "Prevent this piece from using its power in the next two turns?"
         self.highlight_types = ["highlight all targets"]
+
 
 class EarthPower(Power):
     def __init__(self, piece):
@@ -704,7 +846,7 @@ class SkyPower(Power):
             diff_x = field.x - self.piece.location.x
             diff_y = field.y - self.piece.location.y
             jump_location = board.get_field(field.x + diff_x, field.y + diff_y)
-            if jump_location and jump_location.check_legal_movement(self.piece):
+            if jump_location and jump_location.check_legal_movement(self.piece, using_power=True):
                 jump_locations.append(jump_location)
 
         return jump_locations
@@ -754,7 +896,7 @@ class SunPower(Power):
             return False
         if pass_through_field.type == 'no field':
             return False
-        if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
+        if target_field.check_legal_movement(self.piece, using_power=True) and pass_through_field.check_legal_movement(self.piece, using_power=True):
             return True
         else:
             return False
@@ -808,7 +950,7 @@ class WavePower(Power):
                 adjacent_fields = piece.location.get_adjacent(board, type='all')
                 possible_movement = False
                 for adjacent_field in adjacent_fields:
-                    if adjacent_field.check_legal_movement(piece):
+                    if adjacent_field.check_legal_movement(piece, using_power=True):
                         possible_movement = True
                         break
                 if possible_movement:
@@ -822,7 +964,7 @@ class WavePower(Power):
         adjacent_fields = self.selected_piece_1.location.get_adjacent(board, type='all')
 
         for adjacent_field in adjacent_fields:
-            if adjacent_field.check_legal_movement(self.selected_piece_1):
+            if adjacent_field.check_legal_movement(self.selected_piece_1, using_power=True):
                 target_fields.append(adjacent_field)
 
         return target_fields
@@ -872,7 +1014,7 @@ class WindPower(Power):
             return False
         if pass_through_field.type == 'no field':
             return False
-        if target_field.check_legal_movement(self.piece) and pass_through_field.check_legal_movement(self.piece):
+        if target_field.check_legal_movement(self.piece, using_power=True) and pass_through_field.check_legal_movement(self.piece, using_power=True):
             return True
         else:
             return False
@@ -902,7 +1044,7 @@ class ShadowPower(Power):
             diff_x = field.x - self.piece.location.x
             diff_y = field.y - self.piece.location.y
             jump_location = board.get_field(field.x + diff_x, field.y + diff_y)
-            if jump_location and jump_location.check_legal_movement(self.piece):
+            if jump_location and jump_location.check_legal_movement(self.piece, using_power=True):
                 jump_locations.append(jump_location)
 
         return jump_locations
@@ -929,7 +1071,7 @@ class MetalmakerPower(Power):
 
             adjacent_fields = self.piece.location.get_adjacent(board, type='all')
             for field in adjacent_fields:
-                if field.check_legal_movement(self.piece):
+                if field.check_legal_movement(self.piece, using_power=True):
                     targets.append(field)
 
         return targets
@@ -1153,7 +1295,7 @@ class EndPower(Power):
                 if not piece.location.in_temple_area():
                     temple_area = board.get_temple_area(piece.player)
                     for field in temple_area:
-                        if field.check_legal_movement(piece):
+                        if field.check_legal_movement(piece, using_power=True):
                             target_fields.append(piece.location)
                             break
 
@@ -1163,7 +1305,7 @@ class EndPower(Power):
         target_fields = []
         temple_area = board.get_temple_area(self.selected_piece_1.player)
         for field in temple_area:
-            if field.check_legal_movement(self.selected_piece_1):
+            if field.check_legal_movement(self.selected_piece_1, using_power=True):
                 target_fields.append(field)
 
         return target_fields

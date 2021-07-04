@@ -17,6 +17,8 @@ class Pieces:
         self.active_pieces = []
         self.passive_pieces = []
         self.set_active_and_passive_pieces()
+        self.set_domains()
+        self.set_god_groups()
 
     def set_active_and_passive_pieces(self):
         self.active_pieces = []
@@ -53,6 +55,28 @@ class Pieces:
 
         return player_pieces
 
+    def set_domains(self):
+        self.spiritual_pieces = []
+        self.physical_pieces = []
+        for piece in self.pieces:
+            if piece.domain == 'spiritual':
+                self.spiritual_pieces.append(piece)
+            elif piece.domain == 'physical':
+                self.physical_pieces.append(piece)
+
+    def set_god_groups(self):
+        self.god_groups = {'builder': [],
+                           'mover': [],
+                           'alchemist': [],
+                           'consumer': [],
+                           'gifter': [],
+                           'connector': [],
+                           'director': [],
+                           'wiper': []}
+        for piece in self.pieces:
+            if piece.god_group:
+                self.god_groups[piece.god_group].append(piece)
+
 
 class Piece:
     def __init__(self, piece_id, player):
@@ -60,6 +84,8 @@ class Piece:
         self.location = None
         self.name = None
         self.gender = None
+        self.domain = None
+        self.god_group = None
         
         self.active = True
         self.player = player
@@ -70,6 +96,9 @@ class Piece:
         self.legacy = False
         self.legacy_frequency = False
         self.legacy_duration = False
+
+        self.potency = False
+        self.frequency = False
         
         self.union = False
         self.union_partners = set()
@@ -88,6 +117,7 @@ class Piece:
         self.piece_rectangle = None
         self.symbol_rectangle = None
         self.selection_nr = 0
+        self.perception = 0
 
         self.movement_type = 'all'
 
@@ -125,6 +155,14 @@ class Piece:
                 return False
         else:
             return False
+
+    def countdown_frequency(self):
+        if self.frequency > 0:
+            self.frequency -= 1
+
+    def countdown_potency(self):
+        if self.potency > 0:
+            self.potency -= 1
 
     def set_piece_rectangle(self):
         x = (1 + self.location.x) * SQUARE_WIDTH + PIECE_PADDING
@@ -184,6 +222,13 @@ class Piece:
 
         self.location = None
 
+    def activate_perception(self):
+        self.perception = 3
+
+    def countdown_perception(self):
+        if self.perception:
+            self.perception -= 1
+
     def sleep(self, pieces):
         if not self.legacy_frequency:
             self.active = False
@@ -205,15 +250,6 @@ class Piece:
 
         if self.union:
             self.trigger_union(pieces, 'wake')
-
-    def set_perception(self, user):
-        if user.legacy_duration:
-            self.perception = 4
-        else:
-            self.perception = 2
-    def countdown_perception(self):
-        self.perception -= 1
-        assert self.perception >= 0
 
     def activate_union(self, piece):
         self.union = True
@@ -245,8 +281,8 @@ class Piece:
         else:
             self.communication = 1
     def countdown_communication(self):
-        self.communication -= 1
-        assert self.communication >= 0
+        if self.communication > 1:
+            self.communication -= 1
 
     def activate_illusion(self):
         self.illusion = True
@@ -271,8 +307,8 @@ class Piece:
             self.blindness = 2
         
     def countdown_blindness(self):
-        self.blindness -= 1
-        assert self.blindness >= 0
+        if self.blindness > 0:
+            self.blindness -= 1
 
     def set_oblivion(self, user):
         if user.legacy_duration:
@@ -290,8 +326,8 @@ class Piece:
             self.liberation = 2
             
     def countdown_liberation(self):
-        self.liberation -= 1
-        assert self.liberation >= 0
+        if self.liberation > 0:
+            self.liberation -= 1
 
     def immune(self, power):
         if self.perception:
@@ -307,34 +343,6 @@ class Piece:
                 return True
             else:
                 return False
-
-    def check_legal_move_movement(self, target_location, board):
-        if not target_location in self.get_movement_options(board):
-            raise IllegalMove('range')
-
-    def check_legal_move_general(self, target_location, board):
-
-        if target_location.ocean and self.gender == 'F' and not \
-           self.immune('Ocean'):
-                raise IllegalMove('ocean')
-
-        elif target_location.drought and self.gender == 'M' and not \
-             self.immune('Drought'):
-            raise IllegalMove('drought')
-
-        elif target_location.flame and self.player not in \
-             target_location.flame_casters and not self.immune("Flame"):
-            raise IllegalMove('flame')
-
-        elif target_location.occupied:
-            if target_location.piece:
-                raise IllegalMove('piece')
-            elif target_location.barrier:
-                raise IllegalMove('barrier')
-
-        elif target_location.type == "Temple" and \
-             target_location.player == self.player:
-            raise IllegalMove('temple')
 
     def move(self, target_location, board):
         original_x = self.location.x
@@ -382,6 +390,7 @@ class Builder(God):
         self.powers = [EarthPower(self), OceanPower(self), SkyPower(self), SunPower(self)]
         self.symbol = 'e'
         self.load_symbol_image()
+        self.domain = 'physical'
 
 class Alchemist(God):
     def __init__(self, nr, player):
@@ -391,6 +400,7 @@ class Alchemist(God):
         self.powers = [MetalmakerPower(self), BloodmakerPower(self), FogPower(self), FlamePower(self)]
         self.symbol = 'g'
         self.load_symbol_image()
+        self.domain = 'physical'
 
 class Connector(God):
     def __init__(self, nr, player):
@@ -400,6 +410,8 @@ class Connector(God):
         self.powers = [UnionPower(self), ImpressionPower(self), CommunicationPower(self), FamiliarityPower(self)]
         self.symbol = 'b'
         self.load_symbol_image()
+        self.domain = 'spiritual'
+
         
 class Wiper(God):
     def __init__(self, nr, player):
@@ -409,6 +421,7 @@ class Wiper(God):
         self.powers = [DeathPower(self), BlindnessPower(self), OblivionPower(self), LiberationPower(self)]
         self.symbol = 'd'
         self.load_symbol_image()
+        self.domain = 'spiritual'
 
 class Mover(God):
     def __init__(self, nr, player):
@@ -418,6 +431,7 @@ class Mover(God):
         self.powers = [QuakePower(self), WavePower(self), WindPower(self), ShadowPower(self)]
         self.symbol = 'f'
         self.load_symbol_image()
+        self.domain = 'physical'
 
 class Consumer(God):
     def __init__(self, nr, player):
@@ -427,6 +441,7 @@ class Consumer(God):
         self.powers = [VoidPower(self), DroughtPower(self), EndPower(self), NightPower(self)]
         self.symbol = 'h'
         self.load_symbol_image()
+        self.domain = 'physical'
 
 class Gifter(God):
     def __init__(self, nr, player):
@@ -436,6 +451,7 @@ class Gifter(God):
         self.powers = [LifePower(self), PerceptionPower(self), MindPower(self), LegacyPower(self)]
         self.symbol = 'a'
         self.load_symbol_image()
+        self.domain = 'spiritual'
 
 class Director(God):
     def __init__(self, nr, player):
@@ -445,6 +461,7 @@ class Director(God):
         self.powers = [TimePower(self), IllusionPower(self), IdeaPower(self), MetamorphosisPower(self)]
         self.symbol = 'c'
         self.load_symbol_image()
+        self.domain = 'spiritual'
 
 #==============================================================================
 
@@ -472,6 +489,8 @@ class Union(FemaleHeir):
         self.symbol = 'm'
         self.load_symbol_image()
         self.power = UnionPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'connector'
 
 
 class Impression(FemaleHeir):
@@ -481,25 +500,8 @@ class Impression(FemaleHeir):
         self.symbol = 'n'
         self.load_symbol_image()
         self.power = ImpressionPower(self)
-        self.selections = ['piece']
-
-    def use_power(self, piece, board):
-        self.select_piece(piece, self.name)
-
-        if board.get_field(piece.location).type == \
-           "Temple Area":
-            raise IllegalPower('impression')
-
-        old_location = copy.copy(self.location)
-        piece_location = copy.copy(piece.location)
-
-        board.get_field(old_location).piece = piece
-        board.get_field(piece_location).piece = self
-
-        self.location = board.get_field(piece_location)
-        piece.location = board.get_field(old_location)
-
-        self.sleep()
+        self.domain = 'spiritual'
+        self.god_group = 'connector'
 
 
 class Communication(FemaleHeir):
@@ -510,6 +512,8 @@ class Communication(FemaleHeir):
         self.load_symbol_image()
         self.selections = ['piece']
         self.power = CommunicationPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'connector'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -525,9 +529,12 @@ class Familiarity(FemaleHeir):
         self.symbol = 'p'
         self.load_symbol_image()
         self.power = FamiliarityPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'connector'
 
     def use_power(self, piece, pieces):
         raise NotImplementedError
+
 
 class Death(FemaleHeir):
     def __init__(self, nr, player):
@@ -536,6 +543,8 @@ class Death(FemaleHeir):
         self.symbol = 'u'
         self.load_symbol_image()
         self.power = DeathPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'wiper'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -546,6 +555,7 @@ class Death(FemaleHeir):
         piece.sleep()
         self.sleep()
 
+
 class Blindness(FemaleHeir):
     def __init__(self, nr, player):
         FemaleHeir.__init__(self, nr, player)
@@ -553,12 +563,15 @@ class Blindness(FemaleHeir):
         self.symbol = 'v'
         self.load_symbol_image()
         self.power = BlindnessPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'wiper'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
 
         piece.set_blindness(self)
         self.sleep()
+
 
 class Oblivion(FemaleHeir):
     def __init__(self, nr, player):
@@ -568,6 +581,8 @@ class Oblivion(FemaleHeir):
         self.load_symbol_image()
         self.selections = ['piece']
         self.power = OblivionPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'wiper'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -578,6 +593,7 @@ class Oblivion(FemaleHeir):
         piece.set_oblivion(self)
         self.sleep()
 
+
 class Liberation(FemaleHeir):
     def __init__(self, nr, player):
         FemaleHeir.__init__(self, nr, player)
@@ -586,6 +602,8 @@ class Liberation(FemaleHeir):
         self.load_symbol_image()
         self.selections = ['piece']
         self.power = LiberationPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'wiper'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -602,13 +620,9 @@ class Earth(FemaleHeir):
         self.load_symbol_image()
         self.selections = ['field']
         self.power = EarthPower(self)
+        self.domain = 'physical'
+        self.god_group = 'builder'
 
-    def use_power(self, barriers, board, field_1, field_2=None):
-        barriers.place_barrier(field_1, board)
-        if field_2:
-            barriers.place_barrier(field_2, board)
-
-        self.sleep()
 
 class Ocean(FemaleHeir):
     def __init__(self, nr, player):
@@ -617,16 +631,9 @@ class Ocean(FemaleHeir):
         self.symbol = 'z'
         self.load_symbol_image()
         self.power = OceanPower(self)
+        self.domain = 'physical'
+        self.god_group = 'builder'
 
-    def use_power(self, field, board):
-        board.check_field(field)
-        adjacent_fields = field.get_adjacent(board)
-        
-        for field in adjacent_fields:
-            field.ocean = True
-            
-        self.sleep()
-        
 
 class Sky(FemaleHeir):
     def __init__(self, nr, player):
@@ -635,40 +642,9 @@ class Sky(FemaleHeir):
         self.symbol = 'A'
         self.load_symbol_image()
         self.power = SkyPower(self)
+        self.domain = 'physical'
+        self.god_group = 'builder'
 
-    def use_power(self, piece, board):
-        self.select_piece(piece, self.name)
-
-        adjacent = self.location.check_adjacent(piece.location, board)
-
-        if not adjacent:
-            raise IllegalPower('sky')
-
-        assert not (0 == diff_x == diff_y)
-
-        if self.location.x > piece.location.x:
-            new_x = piece.location.x - 1
-        elif self.location.x == piece.location.x:
-            new_x = self.location.x
-        else:
-            new_x = piece.location.x + 1
-
-        if self.location.y > piece.location.y:
-            new_y = piece.location.y - 1
-        elif self.location.y == piece.location.y:
-            new_y = self.location.y
-        else:
-            new_y = piece.location.y + 1
-
-        new_field = PhantomField(new_x, new_y)
-        board.check_field(new_field)
-        new_field = board.get_field(new_field)
-        
-        self.check_legal_move_general(new_field, board)
-        self.move(new_field, board)
-
-        self.sleep()
-        
 
 class Sun(FemaleHeir):
     def __init__(self, nr, player):
@@ -677,71 +653,8 @@ class Sun(FemaleHeir):
         self.symbol = 'B'
         self.load_symbol_image()
         self.power = SunPower(self)
-
-    def use_power(self, field, board):
-        legal_locations = self.find_legal_locations(field, board)
-        legal_locations = self.filter_legal_locations(legal_locations,
-                                                       board)
-
-        if not field in legal_locations:
-            raise IllegalPower('sun')
-
-        self.move(field, board)
-
-        self.sleep()
-
-    def find_legal_locations(self, field, board):
-
-        legal_locations = set([])
-
-        for i in range(self.location.x - 2, self.location.x + 3):
-            for j in range(self.location.y - 2, self.location.y + 3):
-
-                if self.location.x == i and self.location.y == j:
-                    continue
-                elif self.location.x != i and self.location.y != j:
-                    continue
-                else:
-                    legal_locations.add(PhantomField(i, j))
-
-        return legal_locations
-    
-
-    def filter_legal_locations(self, legal_locations, board):
-        filtered_locations = []
-        
-        direction_1 = []
-        direction_2 = []
-        direction_3 = []
-        direction_4 = []
-
-        for location in legal_locations:
-            if self.location.y > location.y:
-                direction_1.append(location)
-            elif self.location.x > location.x:
-                direction_2.append(location)
-            elif self.location.y < location.y:
-                direction_3.append(location)
-            elif self.location.x < location.x:
-                direction_4.append(location)
-
-        direction_1.sort(key= lambda field: field.y, reverse=True)
-        direction_2.sort(key= lambda field: field.x, reverse=True)
-        direction_3.sort(key= lambda field: field.y)
-        direction_4.sort(key= lambda field: field.x)
-
-        all_directions = [direction_1, direction_2, direction_3, direction_4]
-
-        for direction in all_directions:
-            for field in direction:
-                try:
-                    board.check_field(field)
-                    self.check_legal_move_general(board.get_field(field), board)
-                    filtered_locations.append(field)
-                except (IllegalMove, IllegalField):
-                    break
-
-        return filtered_locations
+        self.domain = 'physical'
+        self.god_group = 'builder'
             
 
 class Metalmaker(FemaleHeir):
@@ -751,22 +664,9 @@ class Metalmaker(FemaleHeir):
         self.symbol = 'G'
         self.load_symbol_image()
         self.power = MetalmakerPower(self)
+        self.domain = 'physical'
+        self.god_group = 'alchemist'
 
-    def use_power(self, field, barriers, board):
-        
-        if barriers.count == 3:
-            raise IllegalPower('metalmaker')
-
-        board.check_field(field)
-        self.check_legal_move_movement(field, board)
-        self.check_legal_move_general(field, board)
-
-        old_field = self.location
-
-        self.move(old_field, board)
-        barriers.place_barrier(field, board)
-
-        self.sleep()
 
 class Bloodmaker(FemaleHeir):
     def __init__(self, nr, player):
@@ -775,24 +675,9 @@ class Bloodmaker(FemaleHeir):
         self.symbol = 'H'
         self.load_symbol_image()
         self.power = BloodmakerPower(self)
+        self.domain = 'physical'
+        self.god_group = 'alchemist'
 
-    def use_power(self, piece, barrier_field, barriers, board):
-        self.select_piece(piece, self.name)
-        
-        if not board.get_field(barrier_field).barrier:
-            raise IllegalBarrier('no barrier')
-        
-        if not piece.location.check_adjacent(barrier_field, board):
-            raise IllegalPower('bloodmaker')
-
-        board.get_field(barrier_field).occupied = False
-
-        piece_location = copy.copy(piece.location)
-
-        piece.move(barrier_field, board)
-        barriers.move_barrier(barrier_field, piece_location)
-
-        self.sleep()
 
 class Fog(FemaleHeir):
     def __init__(self, nr, player):
@@ -801,24 +686,9 @@ class Fog(FemaleHeir):
         self.symbol = 'I'
         self.load_symbol_image()
         self.power = FogPower(self)
+        self.domain = 'physical'
+        self.god_group = 'alchemist'
 
-    def use_power(self, piece_1, piece_2, board):
-        self.select_piece(piece_1, self.name)
-        self.select_piece(piece_2, self.name)
-
-        if not piece_1.location.check_adjacent(piece_2.location, board):
-            raise IllegalPower('fog')
-
-        piece1_location = copy.copy(piece_1.location)
-        piece2_location = copy.copy(piece_2.location)
-
-        board.get_field(piece1_location).piece = piece_2
-        board.get_field(piece2_location).piece = piece_1
-
-        piece_1.location = board.get_field(piece2_location)
-        piece_2.location = board.get_field(piece1_location)
-
-        self.sleep()
 
 class Flame(FemaleHeir):
     def __init__(self, nr, player):
@@ -827,34 +697,8 @@ class Flame(FemaleHeir):
         self.symbol = 'J'
         self.load_symbol_image()
         self.power = FlamePower(self)
-
-    def use_power(self, board):
-        for field in board.find_flame_locations():
-            board.get_field(field).activate_flame(self)
-
-        self.sleep()
-
-
-    def find_flame_locations(self, board):
-
-        flame_locations = set(self.location.get_adjacent(board))
-
-        for i in range(self.location.x - 2, self.location.x + 3):
-            for j in range(self.location.y - 2, self.location.y + 3):
-
-                if self.location.x == i and self.location.y == j:
-                    continue
-                elif self.location.x != i and self.location.y != j:
-                    continue
-                else:
-                    try:
-                        board.check_field(PhantomField(i, j))
-                        flame_locations.add(PhantomField(i, j))
-                    except IllegalField:
-                        pass
-                    
-        return flame_locations
-        
+        self.domain = 'physical'
+        self.god_group = 'alchemist'
 
 
 #==============================================================================
@@ -866,14 +710,9 @@ class Life(MaleHeir):
         self.symbol = 'i'
         self.load_symbol_image()
         self.power = LifePower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'gifter'
 
-    def use_power(self, piece):
-        self.select_piece(piece, self.name)
-        if piece.active:
-            raise IllegalPower('life')
-
-        piece.active = True
-        self.sleep()
 
 class Perception(MaleHeir):
     def __init__(self, nr, player):
@@ -882,12 +721,9 @@ class Perception(MaleHeir):
         self.symbol = 'j'
         self.load_symbol_image()
         self.power = PerceptionPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'gifter'
 
-    def use_power(self, piece):
-        self.select_piece(piece, self.name)
-
-        piece.set_perception(self)
-        self.sleep()
 
 class Mind(MaleHeir):
     def __init__(self, nr, player):
@@ -896,12 +732,9 @@ class Mind(MaleHeir):
         self.symbol = 'k'
         self.load_symbol_image()
         self.power = MindPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'gifter'
 
-    def use_power(self, board):
-        temple = board.get_field(self.player.temple)
-        temple.set_mind(self)
-
-        self.sleep()
 
 class Legacy(MaleHeir):
     def __init__(self, nr, player):
@@ -910,6 +743,8 @@ class Legacy(MaleHeir):
         self.symbol = 'l'
         self.load_symbol_image()
         self.power = LegacyPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'gifter'
 
     def use_power(self, piece):
         self.select_piece(piece, self.name)
@@ -919,6 +754,7 @@ class Legacy(MaleHeir):
         piece.legacy = True
         self.sleep()
 
+
 class Time(MaleHeir):
     def __init__(self, nr, player):
         MaleHeir.__init__(self, nr, player)
@@ -926,13 +762,9 @@ class Time(MaleHeir):
         self.symbol = 'q'
         self.load_symbol_image()
         self.power = TimePower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'director'
 
-    def use_power(self, player):
-        
-        player.set_time_pieces(self)
-        player.set_time_count()
-        self.sleep()
-        
 
 class Illusion(MaleHeir):
     def __init__(self, nr, player):
@@ -941,14 +773,9 @@ class Illusion(MaleHeir):
         self.symbol = 'r'
         self.load_symbol_image()
         self.power = IllusionPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'director'
 
-    def use_power(self, piece):
-
-        self.select_piece(piece, self.name)
-
-        piece.player.add_piece_illusion(piece)
-        self.sleep()
-        
 
 class Idea(MaleHeir):
     def __init__(self, nr, player):
@@ -957,12 +784,9 @@ class Idea(MaleHeir):
         self.symbol = 's'
         self.load_symbol_image()
         self.power = IdeaPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'director'
 
-    def use_power(self, piece):
-        self.select_piece(piece, self.name)
-        piece.player.add_piece_idea(piece)
-        self.sleep()
-        
 
 class Metamorphosis(MaleHeir):
     def __init__(self, nr, player):
@@ -971,6 +795,8 @@ class Metamorphosis(MaleHeir):
         self.symbol = 't'
         self.load_symbol_image()
         self.power = MetamorphosisPower(self)
+        self.domain = 'spiritual'
+        self.god_group = 'director'
 
     def use_power(self, piece_1, piece_2, board, players):
         if piece_1.player == self.player:
@@ -1005,6 +831,8 @@ class Quake(MaleHeir):
         self.symbol = 'C'
         self.load_symbol_image()
         self.power = QuakePower(self)
+        self.domain = 'physical'
+        self.god_group = 'mover'
 
 
 class Wave(MaleHeir):
@@ -1014,6 +842,8 @@ class Wave(MaleHeir):
         self.symbol = 'D'
         self.load_symbol_image()
         self.power = WavePower(self)
+        self.domain = 'physical'
+        self.god_group = 'mover'
 
 
 class Wind(MaleHeir):
@@ -1023,6 +853,8 @@ class Wind(MaleHeir):
         self.symbol = 'E'
         self.load_symbol_image()
         self.power = WindPower(self)
+        self.domain = 'physical'
+        self.god_group = 'mover'
 
 
 class Shadow(MaleHeir):
@@ -1032,6 +864,8 @@ class Shadow(MaleHeir):
         self.symbol = 'F'
         self.load_symbol_image()
         self.power = ShadowPower(self)
+        self.domain = 'physical'
+        self.god_group = 'mover'
 
 
 class Void(MaleHeir):
@@ -1041,6 +875,8 @@ class Void(MaleHeir):
         self.symbol = 'K'
         self.load_symbol_image()
         self.power = VoidPower(self)
+        self.domain = 'physical'
+        self.god_group = 'consumer'
 
 
 class Drought(MaleHeir):
@@ -1050,6 +886,8 @@ class Drought(MaleHeir):
         self.symbol = 'L'
         self.load_symbol_image()
         self.power = DroughtPower(self)
+        self.domain = 'physical'
+        self.god_group = 'consumer'
 
 
 class End(MaleHeir):
@@ -1059,7 +897,8 @@ class End(MaleHeir):
         self.symbol = 'M'
         self.load_symbol_image()
         self.power = EndPower(self)
-
+        self.domain = 'physical'
+        self.god_group = 'consumer'
 
 
 class Night(MaleHeir):
@@ -1069,3 +908,5 @@ class Night(MaleHeir):
         self.symbol = 'N'
         self.load_symbol_image()
         self.power = NightPower(self)
+        self.domain = 'physical'
+        self.god_group = 'consumer'

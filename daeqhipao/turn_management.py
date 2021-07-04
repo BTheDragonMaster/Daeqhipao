@@ -141,6 +141,13 @@ class TurnManager:
             if field.flame:
                 field.countdown_flame(self.current_player)
 
+        for piece in self.pieces.get_pieces_player(self.current_player):
+            piece.countdown_frequency()
+            piece.countdown_potency()
+            piece.countdown_blindness()
+            piece.countdown_liberation()
+            piece.countdown_perception()
+
         self.current_player = self.players[self.turn % len(self.players)]
         self.current_piece = None
         self.has_moved = False
@@ -367,7 +374,8 @@ class TurnManager:
             if self.current_piece and self.has_moved:
                 if not self.current_piece.idea:
                     show_end_turn_button(self.screen, self.active_buttons)
-                show_power_button(self.screen, self.active_buttons)
+                if self.power_usable_from_square(self.current_piece.location, self.current_piece):
+                    show_power_button(self.screen, self.active_buttons)
 
             if self.current_piece and self.power and state =='select power target':
                 self.reset_power()
@@ -396,6 +404,11 @@ class TurnManager:
     def new_state(self, state_type):
         self.state_nr += 1
         self.states.append(state_type)
+
+    def remove_highlighting_targets(self):
+        for field in self.current_target_fields:
+            field.highlight_colour(self.screen, self.board, BACKGROUND_BOARD)
+
 
     def reset_power(self):
         self.hover = False
@@ -524,17 +537,28 @@ class TurnManager:
         self.power = button.power
         hide_piece_buttons(self.screen, self.active_buttons)
 
-        if not self.power.start_with_choice:
-            self.show_power_targets()
-            self.new_state('select power target')
+        if self.power.fixed_affected_area:
+            self.current_target_fields = self.power.get_target_fields_1(self.board)
+            self.board.highlight_fields_strong(self.current_player, self.current_target_fields)
+            self.ask_confirmation()
         else:
-            self.display_choices()
-            self.new_state('make choice')
+
+            if not self.power.start_with_choice:
+                self.show_power_targets()
+                self.new_state('select power target')
+            else:
+                self.display_choices()
+                self.new_state('make choice')
 
     def make_choice(self, button):
         self.power.choice = button.text
         if self.power.choice == "Place 1 barrier" or self.power.choice == "Remove 1 barrier":
             self.power.target_nr -= 1
+        elif self.power.choice == 'Increase potency':
+            self.power.potency_or_frequency = 'potency'
+        elif self.power.choice == 'Increase frequency':
+            self.power.potency_or_frequency = 'frequency'
+
         hide_piece_buttons(self.screen, self.active_buttons)
         self.new_state('select power target')
 
@@ -580,10 +604,23 @@ class TurnManager:
 
         elif button.text == "CONFIRM":
             self.power.activate_power(self.pieces, self.barriers, self.board)
+            self.remove_highlighting_targets()
             self.current_target_fields = []
 
-            if not self.zaopeng():
-                self.next_turn()
+            if not self.current_piece.frequency:
+                if not self.zaopeng():
+                    self.next_turn()
+
+            else:
+                self.current_piece.countdown_frequency()
+                print("Frequency", self.current_piece.frequency)
+                hide_piece_buttons(self.screen, self.active_buttons)
+                if self.power_usable_from_square(self.current_piece.location, self.current_piece):
+                    show_power_button(self.screen, self.active_buttons)
+                show_end_turn_button(self.screen, self.active_buttons)
+
+                self.new_state('select use power or end turn')
+
         elif button.text == "END TURN":
             if not self.current_player.penalty_turns:
                 self.penalty_zaopeng()

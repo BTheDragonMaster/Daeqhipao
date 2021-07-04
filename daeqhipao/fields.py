@@ -42,6 +42,7 @@ class Field:
         self.flame_counts = {}
         self.ocean_casters = set()
         self.drought_casters = set()
+        self.mind = False
 
         self.type = 'Regular'
         self.rectangle = None
@@ -231,7 +232,7 @@ class Field:
 
         return adjacent
 
-    def check_legal_movement(self, piece):
+    def check_legal_movement(self, piece, using_power=False):
         if self.type == 'no field':
             return False
         elif self.occupied:
@@ -239,6 +240,8 @@ class Field:
         elif self.type == 'temple square' and self.owner == piece.player:
             return False
         elif not self.permitted_area_condition(piece):
+            return False
+        elif self.mind and using_power and not piece.immune('Mind'):
             return False
 
         return True

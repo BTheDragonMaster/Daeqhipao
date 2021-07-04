@@ -116,6 +116,7 @@ class Player:
     def set_field_ownership(self, board):
         x, y = self.temple
         board.board[x][y].set_ownership(self)
+        board.temple_squares[self] = board.board[x][y]
 
         for x, y in self.starting_squares:
             board.board[x][y].set_ownership(self)
