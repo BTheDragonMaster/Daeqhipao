@@ -120,6 +120,15 @@ class Field:
         else:
             pygame.draw.rect(screen, BACKGROUND_BOARD, self.rectangle)
 
+    def highlight_colour(self, screen, board, colour):
+        pygame.draw.rect(screen, colour, self.rectangle)
+        self.draw_conditions(screen)
+        if self.piece:
+            board.draw_piece(self.piece)
+        elif self.barrier:
+            board.draw_barrier(self.barrier)
+        board.draw_frame()
+
     def highlight(self, screen, player, board):
         pygame.draw.rect(screen, player.colour_rgb, self.rectangle)
         self.draw_conditions(screen)

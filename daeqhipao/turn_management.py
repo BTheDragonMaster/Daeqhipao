@@ -237,10 +237,12 @@ class TurnManager:
             if not self.power_usable_from_square(self.current_piece.location, self.current_piece):
                 show_move_button(self.screen, self.active_buttons)
             elif not self.movement_options:
-                print('Hello')
                 show_power_button(self.screen, self.active_buttons)
             else:
                 show_piece_buttons(self.screen, self.active_buttons)
+
+        self.current_piece.location.highlight_colour(self.screen, self.board, HIGHLIGHT_BOARD)
+
 
         self.new_state('select move or use power')
 
@@ -264,7 +266,6 @@ class TurnManager:
                 relative_position += 0.05
 
     def show_power_targets(self):
-        print("showing targets..")
 
         if self.current_target_fields:
             for field in self.current_target_fields:
@@ -276,7 +277,9 @@ class TurnManager:
         self.power.highlight_all_targets(self)
 
     def show_power_options(self):
+        print("er hi?")
         hide_piece_buttons(self.screen, self.active_buttons)
+        print(self.active_buttons)
         x = int(0.7 * HEIGHT)
 
         relative_position = 0.75
@@ -346,7 +349,6 @@ class TurnManager:
         if self.current_piece.idea:
             show_power_button(self.screen, self.active_buttons)
         elif self.power_usable_from_square(self.current_piece.location, self.current_piece):
-            print("Power usable")
             show_power_button(self.screen, self.active_buttons)
         self.has_moved = True
         self.current_piece.deactivate_illusion()

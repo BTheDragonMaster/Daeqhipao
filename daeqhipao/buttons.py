@@ -19,7 +19,7 @@ class Button:
         self.selected = False
 
     def __hash__(self):
-        return self.text
+        return hash(self.text)
 
     def __eq__(self, other):
         return self.text == other.text
@@ -150,9 +150,9 @@ def get_mouse_button(active_buttons, mouse):
 
 
 def make_buttons():
-    buttons = []
+    buttons = set()
     new_game = Button("NEW GAME", (HEIGHT + int(PANEL_WIDTH * 0.05), int(9.5 * HEIGHT / 10)), (int(PANEL_WIDTH * 0.9), int(HEIGHT / 25)))
-    buttons.append(new_game)
+    buttons.add(new_game)
 
     return buttons
 
@@ -160,32 +160,32 @@ def make_buttons():
 def show_piece_buttons(screen, active_buttons):
     MOVE_BUTTON.draw(screen)
     POWER_BUTTON.draw(screen)
-    active_buttons.append(MOVE_BUTTON)
-    active_buttons.append(POWER_BUTTON)
+    active_buttons.add(MOVE_BUTTON)
+    active_buttons.add(POWER_BUTTON)
 
 def show_move_button(screen, active_buttons):
     MOVE_BUTTON.draw(screen)
-    active_buttons.append(MOVE_BUTTON)
+    active_buttons.add(MOVE_BUTTON)
 
 def show_end_turn_button(screen, active_buttons):
     END_TURN_BUTTON.draw(screen)
-    active_buttons.append(END_TURN_BUTTON)
+    active_buttons.add(END_TURN_BUTTON)
 
 def show_power_button(screen, active_buttons):
     POWER_BUTTON.draw(screen)
-    active_buttons.append(POWER_BUTTON)
+    active_buttons.add(POWER_BUTTON)
 
 def show_confirm_button(screen, active_buttons):
     CONFIRM_BUTTON.draw(screen)
-    active_buttons.append(CONFIRM_BUTTON)
+    active_buttons.add(CONFIRM_BUTTON)
 
 def show_reset_selection_button(screen, active_buttons):
     RESET_SELECTION_BUTTON.draw(screen)
-    active_buttons.append(RESET_SELECTION_BUTTON)
+    active_buttons.add(RESET_SELECTION_BUTTON)
 
 def show_back_button(screen, active_buttons):
     BACK_BUTTON.draw(screen)
-    active_buttons.append(BACK_BUTTON)
+    active_buttons.add(BACK_BUTTON)
 
 def hide_back_button(screen, active_buttons):
     hide_button(BACK_BUTTON, screen, active_buttons)
@@ -204,7 +204,7 @@ def hide_piece_buttons(screen, active_buttons):
 
 def hide_power_buttons(screen, active_buttons):
     buttons_to_remove = []
-    for i, button in enumerate(active_buttons[:]):
+    for button in active_buttons:
         if type(button) == PowerButton:
             buttons_to_remove.append(button)
 
@@ -213,7 +213,7 @@ def hide_power_buttons(screen, active_buttons):
 
 def hide_choice_buttons(screen, active_buttons):
     buttons_to_remove = []
-    for i, button in enumerate(active_buttons[:]):
+    for button in active_buttons:
         if type(button) == ChoiceButton:
             buttons_to_remove.append(button)
 
@@ -228,17 +228,17 @@ def hide_power_button(screen, active_buttons):
 
 def show_power_choice_button(screen, active_buttons, button):
     button.draw(screen)
-    active_buttons.append(button)
+    active_buttons.add(button)
 
 def show_remove_barrier_button(screen, active_buttons):
 
     REMOVE_BARRIER_BUTTON.draw(screen)
-    active_buttons.append(REMOVE_BARRIER_BUTTON)
+    active_buttons.add(REMOVE_BARRIER_BUTTON)
 
 def show_place_barrier_button(screen, active_buttons):
 
     PLACE_BARRIER_BUTTON.draw(screen)
-    active_buttons.append(PLACE_BARRIER_BUTTON)
+    active_buttons.add(PLACE_BARRIER_BUTTON)
 
 def hide_remove_barrier_button(screen, active_buttons):
     hide_button(REMOVE_BARRIER_BUTTON, screen, active_buttons)
@@ -249,7 +249,7 @@ def hide_place_barrier_button(screen, active_buttons):
 def hide_button(button, screen, active_buttons):
     try:
         active_buttons.remove(button)
-    except ValueError:
+    except KeyError:
         pass
 
     button.erase_button(screen)

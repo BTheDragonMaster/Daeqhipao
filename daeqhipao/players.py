@@ -41,7 +41,11 @@ class Player:
         self.free_positions = {1, 2, 3, 4, 5}
 
     def __eq__(self, player):
-        return self.id == player.id
+        if type(self) == type(player):
+
+            return self.id == player.id
+        else:
+            return False
 
     def __hash__(self):
         return self.id

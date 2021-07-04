@@ -235,7 +235,6 @@ class Power:
                 targets = self.get_target_fields_2(board)
         elif self.name == 'Void':
             if self.target_nr == 2:
-                print('hey hey hey')
                 targets = self.get_target_fields_1(board)
             elif self.target_nr == 1:
                 targets = self.get_target_fields_2(board)
@@ -283,6 +282,11 @@ class Power:
             targets = self.get_target_fields_1(board, barriers)
         elif self.name == 'Night':
             targets = self.get_target_fields_1(board)
+        elif self.name == 'End':
+            if self.target_nr == 2:
+                targets = self.get_target_fields_1(pieces, board)
+            elif self.target_nr == 1:
+                targets = self.get_target_fields_2(board)
 
         return targets
 
@@ -331,6 +335,8 @@ class Power:
             self.use_power(board)
         elif self.name == 'Night':
             self.use_power(board, barriers)
+        elif self.name == 'End':
+            self.use_power(board)
 
         self.reset_targets()
         self.piece.deactivate_idea()
@@ -359,9 +365,6 @@ class UnionPower(Power):
 
         true_active_targets = []
         true_passive_targets = []
-
-        print(pieces.active_pieces)
-        print(pieces.passive_pieces)
 
         targets = []
 
@@ -1054,8 +1057,6 @@ class FlamePower(Power):
             if not (field.type == 'temple square' and field.owner):
                 affected_fields.append(field)
 
-        print(affected_fields)
-
         field_1 = board.get_field(self.piece.location.x, self.piece.location.y + 2)
         if field_1 and not field_1.type == 'temple square':
             affected_fields.append(field_1)
@@ -1072,11 +1073,7 @@ class FlamePower(Power):
         if field_4 and not field_4.type == 'temple square':
             affected_fields.append(field_4)
 
-        print(affected_fields)
-
         return affected_fields
-
-
 
 
 class VoidPower(Power):
@@ -1103,8 +1100,6 @@ class VoidPower(Power):
         for field in board.fields:
             if field.barrier and not field.barrier == self.selected_barrier_1:
                 target_fields.append(field)
-
-        print(target_fields)
 
         return target_fields
 
@@ -1147,6 +1142,31 @@ class EndPower(Power):
         self.set_target_types(['piece', 'field'])
         self.confirm_message = "Move this piece back to their temple area?"
         self.highlight_types = ["highlight all targets", "highlight all targets"]
+
+    def use_power(self, board):
+        self.selected_piece_1.move(self.selected_field_1, board)
+
+    def get_target_fields_1(self, pieces, board):
+        target_fields = []
+        for piece in pieces.pieces:
+            if not piece.immune('End'):
+                if not piece.location.in_temple_area():
+                    temple_area = board.get_temple_area(piece.player)
+                    for field in temple_area:
+                        if field.check_legal_movement(piece):
+                            target_fields.append(piece.location)
+                            break
+
+        return target_fields
+
+    def get_target_fields_2(self, board):
+        target_fields = []
+        temple_area = board.get_temple_area(self.selected_piece_1.player)
+        for field in temple_area:
+            if field.check_legal_movement(self.selected_piece_1):
+                target_fields.append(field)
+
+        return target_fields
 
 
 class NightPower(Power):

@@ -97,6 +97,14 @@ class Board:
         else:
             return None
 
+    def get_temple_area(self, player):
+        temple_fields = []
+        for field in self.fields:
+            if field.in_temple_area() and field.owner == player:
+                temple_fields.append(field)
+
+        return temple_fields
+
     def draw_barrier(self, barrier):
         barrier_image = pygame.image.load(BARRIER_LOGO)
         barrier_image_scaled = pygame.transform.smoothscale(barrier_image, (BARRIER_SIZE, BARRIER_SIZE))
