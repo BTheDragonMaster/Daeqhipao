@@ -47,7 +47,7 @@ piece_1.set_location((5, 9), board)
 piece_2 = Metamorphosis(2, player_1)
 piece_2.set_location((3, 9), board)
 
-piece_3 = Legacy(3, player_1)
+piece_3 = Time(3, player_1)
 piece_3.set_location((4, 9), board)
 
 piece_4 = Illusion(4, player_1)

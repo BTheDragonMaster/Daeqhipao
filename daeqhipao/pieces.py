@@ -103,6 +103,7 @@ class Piece:
         self.union = False
         self.union_partners = set()
         self.communication = 0
+        self.communication_active = 0
 
         self.blindness = 0
         self.oblivion = 0
@@ -222,8 +223,29 @@ class Piece:
 
         self.location = None
 
-    def activate_perception(self):
-        self.perception = 3
+    def set_potency(self, user):
+        if self.player == user.player:
+            self.potency = 2
+        else:
+            self.potency = 1
+
+    def set_frequency(self, user):
+        if self.player == user.player:
+            self.frequency = 2
+        else:
+            self.frequency = 1
+
+    def activate_perception(self, user, potency=0):
+        if not potency:
+            if self.player == user.player:
+                self.perception = 3
+            else:
+                self.perception = 2
+        else:
+            if self.player == user.player:
+                self.perception = 5
+            else:
+                self.perception = 4
 
     def countdown_perception(self):
         if self.perception:
@@ -275,14 +297,27 @@ class Piece:
         self.legacy_frequency = False
         self.legacy = False
 
-    def set_communication(self, user):
-        if user.legacy_duration:
+
+
+    def activate_communication(self, user, potency=0):
+
+        if self.player == user.player:
+            self.communication_active = 2
+        else:
+            self.communication_active = 1
+
+        if not potency:
             self.communication = 2
         else:
-            self.communication = 1
+            self.communication = 4
+
     def countdown_communication(self):
         if self.communication > 1:
             self.communication -= 1
+
+    def reset_communication(self):
+        if self.communication_active > 0:
+            self.communication_active -= 1
 
     def activate_illusion(self):
         self.illusion = True

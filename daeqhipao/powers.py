@@ -457,6 +457,15 @@ class CommunicationPower(Power):
         self.confirm_message = "Give this piece the option to move two extra times next turn (three times in total)_instead of using its power?"
         self.highlight_types = ["highlight all targets"]
 
+    def use_power(self):
+        self.selected_piece_1.activate_communication(self.piece, self.piece.potency)
+
+    def get_target_fields_1(self, pieces):
+        targets = []
+        for piece in pieces.pieces:
+            if not piece.immune('Communication'):
+                targets.append(piece)
+
 
 class FamiliarityPower(Power):
     def __init__(self, piece):
@@ -498,7 +507,7 @@ class PerceptionPower(Power):
         self.highlight_types = ["highlight all targets"]
 
     def use_power(self):
-        self.selected_piece_1.activate_perception()
+        self.selected_piece_1.activate_perception(self.piece)
 
     def get_target_fields_1(self, pieces):
         target_fields = []
@@ -536,17 +545,10 @@ class LegacyPower(Power):
 
     def use_power(self):
         if self.potency_or_frequency == 'potency':
-            if self.selected_piece_1.player == self.piece.player:
-                self.selected_piece_1.potency = 2
-            else:
-                self.selected_piece_1.potency = 1
+            self.selected_piece_1.set_potency(self.piece)
 
         elif self.potency_or_frequency == 'frequency':
-
-            if self.selected_piece_1.player == self.piece.player:
-                self.selected_piece_1.frequency = 2
-            else:
-                self.selected_piece_1.frequency = 1
+            self.selected_piece_1.set_frequency(self.piece)
 
     def get_target_fields_1(self, pieces):
         target_fields = []
@@ -573,20 +575,13 @@ class TimePower(Power):
 
     def use_power(self):
         if self.potency_or_frequency == 'potency':
-            if self.selected_piece_1.player == self.piece.player:
-                self.selected_piece_1.potency = 2
-            else:
-                self.selected_piece_1.potency = 1
+            self.selected_piece_1.set_potency(self.piece)
 
         elif self.potency_or_frequency == 'frequency':
+            self.selected_piece_1.set_frequency(self.piece)
 
-            if self.selected_piece_1.player == self.piece.player:
-                self.selected_piece_1.frequency = 2
-            else:
-                self.selected_piece_1.frequency = 1
 
     def get_target_fields_1(self, pieces):
-        print(pieces.physical_pieces)
         target_fields = []
         for piece in pieces.physical_pieces:
             if not piece.immune('Time'):
@@ -596,7 +591,6 @@ class TimePower(Power):
                     target_fields.append(piece.location)
                 elif not self.potency_or_frequency and (piece.name in POTENCY or piece.name in FREQUENCY):
                     target_fields.append(piece.location)
-
 
         return target_fields
 

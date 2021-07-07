@@ -9,6 +9,7 @@ class TurnManager:
         select piece
         select move or use power
         select move
+        move communication
         select use power or end turn
         make choice
         select power
