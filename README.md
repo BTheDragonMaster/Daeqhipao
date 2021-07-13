@@ -5,15 +5,18 @@
 ```
 pip install pygame
 git clone https://github.com/BTheDragonMaster/Daeqhipao.git
-cd daeqhipao
 pip install .
 ```
 
 # Run app
 
 ```
-daeqhipao
+cd bin
+python daeqhipao
 ```
+
+![image](https://user-images.githubusercontent.com/37830964/125526088-c85aefde-3979-49cb-bd21-418a9c35472c.png)
+
 
 # Contributions
 
